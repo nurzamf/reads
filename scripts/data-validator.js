@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMappingConfig } from './notion-mapper.js';
-import { normalizeWhitespace, readJsonSafe, slugify } from './utils.js';
+import { normalizeMultilineText, normalizeWhitespace, readJsonSafe, slugify } from './utils.js';
 
 function isSafeHttpOrLocalUrl(url) {
   if (!url || typeof url !== 'string') return false;
@@ -96,7 +96,7 @@ export function validateAndSanitiseBooks(rawBooks, config = loadMappingConfig())
       title,
       author,
       cover_url: isSafeHttpOrLocalUrl(raw.cover_url) ? raw.cover_url.trim() : null,
-      description: normalizeWhitespace(String(raw.description || '')) || null,
+      description: normalizeMultilineText(String(raw.description || '')) || null,
       language: normalizeWhitespace(String(raw.language || '')) || null,
       original_language: normalizeWhitespace(String(raw.original_language || '')) || null,
       publication_year: cleanNumber(raw.publication_year, { min: 1, max: 2100, integer: true }),
@@ -113,7 +113,7 @@ export function validateAndSanitiseBooks(rawBooks, config = loadMappingConfig())
       date_added: isIsoDate(raw.date_added) ? raw.date_added.trim().slice(0, 10) : null,
       date_started: isIsoDate(raw.date_started) ? raw.date_started.trim().slice(0, 10) : null,
       date_finished: isIsoDate(raw.date_finished) ? raw.date_finished.trim().slice(0, 10) : null,
-      review: normalizeWhitespace(String(raw.review || '')) || null,
+      review: normalizeMultilineText(String(raw.review || '')) || null,
       highlights: Array.isArray(raw.highlights)
         ? raw.highlights
             .filter((h) => h && typeof h.text === 'string' && normalizeWhitespace(h.text) !== '')
@@ -124,6 +124,10 @@ export function validateAndSanitiseBooks(rawBooks, config = loadMappingConfig())
         : [],
       goodreads_url: isSafeHttpOrLocalUrl(raw.goodreads_url) ? raw.goodreads_url.trim() : null,
       external_url: isSafeHttpOrLocalUrl(raw.external_url) ? raw.external_url.trim() : null,
+      original_title: normalizeWhitespace(String(raw.original_title || '')) || null,
+      series: normalizeWhitespace(String(raw.series || '')) || null,
+      awards: deduplicateGenres(raw.awards),
+      goodreads_rating: cleanNumber(raw.goodreads_rating, { min: 0, max: 5 }),
     };
 
     const sanitised = {};

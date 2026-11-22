@@ -9,6 +9,7 @@
     "build": "node scripts/build-static.js",
     "lint": "node scripts/lint.js",
     "sync": "node scripts/sync-notion.js",
+    "enrich": "node scripts/goodreads-enricher.js",
     "inspect-notion": "node scripts/inspect-notion.js",
     "validate": "node scripts/data-validator.js"
   },

@@ -10,6 +10,36 @@ import {
   slugify,
 } from './utils.js';
 
+function renderParagraphs(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const lines = block.split('\n').map((l) => l.trim()).filter(Boolean);
+      const isBulleted = lines.length > 0 && lines.every((l) => /^•\s+/.test(l));
+      const isNumbered = lines.length > 0 && lines.every((l) => /^\d+\.\s+/.test(l));
+
+      if (isBulleted) {
+        const items = lines
+          .map((l) => `<li>${escapeHtml(l.replace(/^•\s+/, ''))}</li>`)
+          .join('');
+        return `<ul class="detail-prose-list">${items}</ul>`;
+      }
+
+      if (isNumbered) {
+        const items = lines
+          .map((l) => `<li>${escapeHtml(l.replace(/^\d+\.\s+/, ''))}</li>`)
+          .join('');
+        return `<ol class="detail-prose-list detail-prose-list--ordered">${items}</ol>`;
+      }
+
+      return `<p>${lines.map((l) => escapeHtml(l)).join('<br />')}</p>`;
+    })
+    .join('');
+}
+
 function getRelatedBooks(currentBook, allBooks, limit = 4) {
   const currentGenres = new Set((currentBook.genres || []).map(normalizeGenreKey));
   const currentAuthorKey = normalizeAuthorKey(currentBook.author);
@@ -108,13 +138,17 @@ export function renderBookDetailView(library, slug) {
   const metaItems = [
     { label: 'Reading Status', value: book.status },
     { label: 'Genres', value: book.genres?.length ? book.genres.map((g) => `<a href="#/genres/${encodeURIComponent(slugify(g))}">${escapeHtml(g)}</a>`).join(', ') : null, rawHtml: true },
+    { label: 'Series', value: book.series },
     { label: 'Format', value: book.format },
     { label: 'Pages', value: book.pages ? `${book.pages} pages` : null },
     { label: 'Publication Year', value: book.publication_year ? String(book.publication_year) : null },
     { label: 'Publisher', value: book.publisher },
     { label: 'ISBN', value: book.isbn, mono: true },
     { label: 'Language', value: book.language },
+    { label: 'Original Title', value: book.original_title && book.original_title !== book.title ? book.original_title : null },
     { label: 'Original Language', value: book.original_language && book.original_language !== book.language ? book.original_language : null },
+    { label: 'Goodreads Rating', value: book.goodreads_rating ? `${book.goodreads_rating.toFixed(2)} / 5` : null },
+    { label: 'Awards', value: book.awards?.length ? book.awards.slice(0, 4).join(' · ') : null },
     { label: 'Ownership', value: book.ownership },
     { label: 'Date Added', value: addedText },
     { label: 'Date Started', value: startedText },
@@ -171,15 +205,20 @@ export function renderBookDetailView(library, slug) {
 
           ${
             book.description
-              ? `<p class="detail-description">${escapeHtml(book.description)}</p>`
-              : `<p class="detail-description" style="color: var(--color-muted);">No description has been published for this book yet.</p>`
+              ? `
+            <section class="detail-synopsis-card" aria-label="Synopsis">
+              <h2 class="detail-eyebrow">Synopsis</h2>
+              <div class="detail-description detail-prose">${renderParagraphs(book.description)}</div>
+            </section>
+          `
+              : `<p class="detail-synopsis-empty">No description has been published for this book yet.</p>`
           }
 
           ${
             progress !== null && book.status === 'Reading'
               ? `
             <section class="neo-card-yellow detail-section" aria-label="Reading progress">
-              <h2 style="font-size: 1.2rem; margin-bottom: 0.5rem;">Reading Progress</h2>
+              <h2 class="detail-section-heading">Reading Progress</h2>
               <div class="progress-meta tabular-nums">
                 <span>Page ${escapeHtml(book.current_page)} of ${escapeHtml(book.pages)}</span>
                 <span>${escapeHtml(progress)}% complete</span>
@@ -208,9 +247,11 @@ export function renderBookDetailView(library, slug) {
           ${
             book.review
               ? `
-            <section class="neo-card detail-section">
-              <h2 style="font-size: 1.3rem;">Public Review &amp; Notes</h2>
-              <p style="margin-top: 0.75rem; line-height: 1.7;">${escapeHtml(book.review)}</p>
+            <section class="neo-card detail-section detail-review-card" aria-label="Review and notes">
+              <div class="detail-card-head">
+                <h2 class="detail-section-heading">Review &amp; Notes</h2>
+              </div>
+              <div class="detail-prose detail-review-prose">${renderParagraphs(book.review)}</div>
             </section>
           `
               : ''
@@ -220,7 +261,9 @@ export function renderBookDetailView(library, slug) {
             book.highlights && book.highlights.length > 0
               ? `
             <section class="neo-card detail-section">
-              <h2 style="font-size: 1.3rem;">Public Highlights</h2>
+              <div class="detail-card-head">
+                <h2 class="detail-section-heading">Public Highlights</h2>
+              </div>
               <ul class="highlight-list">
                 ${book.highlights
                   .map((hl) => {

@@ -741,15 +741,15 @@ export function renderGenresView(library, selectedSlug) {
           genres.length === 0
             ? `<div class="nightstand-empty">No genres yet. Add a Genre property in Notion and this page fills itself in.</div>`
             : `
-          <div class="directory-grid">
+          <div class="author-directory-grid">
             ${genres
               .map(
                 (genre) => `
-              <a href="#/genres/${encodeURIComponent(genre.slug)}" class="directory-card">
-                <div>${renderCoverMarkup(genre.coverBook)}</div>
-                <div>
-                  <h2 class="directory-card-title">${escapeHtml(genre.name)}</h2>
-                  <p class="directory-card-count tabular-nums">${escapeHtml(genre.count)} ${genre.count === 1 ? 'book' : 'books'}</p>
+              <a href="#/genres/${encodeURIComponent(genre.slug)}" class="author-directory-card">
+                <div class="author-directory-cover">${renderCoverMarkup(genre.coverBook)}</div>
+                <div class="author-directory-info">
+                  <h2 class="author-directory-name">${escapeHtml(genre.name)}</h2>
+                  <p class="author-directory-count tabular-nums">${escapeHtml(genre.count)} ${genre.count === 1 ? 'book' : 'books'}</p>
                 </div>
               </a>
             `

@@ -53,7 +53,7 @@ if (credCheck.present) {
     .then((res) => {
       fs.appendFileSync(
         statusLogPath,
-        `syncSuccess count=${res.count} updated=${res.updated}\nschema=${JSON.stringify(res.schemaSummary)}\nresolution=${JSON.stringify(res.resolution)}\n`
+        `syncSuccess count=${res.count} updated=${res.updated} reviewsFound=${res.reviewsFound ?? 0}\nschema=${JSON.stringify(res.schemaSummary)}\nresolution=${JSON.stringify(res.resolution)}\n`
       );
     })
     .catch((err) => {

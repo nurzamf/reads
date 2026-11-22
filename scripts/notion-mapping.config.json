@@ -27,7 +27,11 @@
     "review",
     "highlights",
     "goodreads_url",
-    "external_url"
+    "external_url",
+    "original_title",
+    "series",
+    "awards",
+    "goodreads_rating"
   ],
   "privateFieldPatterns": [
     "private",

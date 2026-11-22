@@ -1,12 +1,13 @@
 import {
   isSafeUrl,
   isValidDateString,
+  normalizeMultilineText,
   normalizeWhitespace,
   slugify,
   toTitleCasePreserving,
 } from './utils.js';
 
-const CACHE_KEY = 'nurzams_library_cache_v2';
+const CACHE_KEY = 'nurzams_library_cache_v3';
 const DATA_URL = './data/library.json';
 
 let memoryLibrary = null;
@@ -64,7 +65,12 @@ export function normalizeBook(raw, index = 0) {
   const pages = normalizeNumber(raw?.pages);
   const currentPage = normalizeNumber(raw?.current_page);
   const rating = normalizeNumber(raw?.rating);
+  const goodreadsRating = normalizeNumber(raw?.goodreads_rating);
   const publicationYear = normalizeNumber(raw?.publication_year);
+
+  const awards = Array.isArray(raw?.awards)
+    ? raw.awards.map((a) => normalizeWhitespace(String(a || ''))).filter(Boolean)
+    : [];
 
   return {
     id,
@@ -72,9 +78,12 @@ export function normalizeBook(raw, index = 0) {
     title,
     author,
     cover_url: isSafeUrl(raw?.cover_url) ? raw.cover_url.trim() : null,
-    description: normalizeWhitespace(raw?.description) || null,
+    description: normalizeMultilineText(raw?.description) || null,
     language: normalizeWhitespace(raw?.language) || null,
     original_language: normalizeWhitespace(raw?.original_language) || null,
+    original_title: normalizeWhitespace(raw?.original_title) || null,
+    series: normalizeWhitespace(raw?.series) || null,
+    awards,
     publication_year: publicationYear && publicationYear > 0 ? Math.trunc(publicationYear) : null,
     publisher: normalizeWhitespace(raw?.publisher) || null,
     isbn: normalizeWhitespace(raw?.isbn) || null,
@@ -84,12 +93,16 @@ export function normalizeBook(raw, index = 0) {
     ownership: normalizeWhitespace(raw?.ownership) || null,
     current_page: currentPage !== null && currentPage >= 0 ? Math.trunc(currentPage) : null,
     rating: rating !== null && rating > 0 && rating <= 5 ? rating : null,
+    goodreads_rating:
+      goodreadsRating !== null && goodreadsRating > 0 && goodreadsRating <= 5
+        ? Math.round(goodreadsRating * 100) / 100
+        : null,
     favourite: Boolean(raw?.favourite),
     genres: normalizeGenres(raw || {}),
     date_added: isValidDateString(raw?.date_added) ? raw.date_added.trim().slice(0, 10) : null,
     date_started: isValidDateString(raw?.date_started) ? raw.date_started.trim().slice(0, 10) : null,
     date_finished: isValidDateString(raw?.date_finished) ? raw.date_finished.trim().slice(0, 10) : null,
-    review: normalizeWhitespace(raw?.review) || null,
+    review: normalizeMultilineText(raw?.review) || null,
     highlights: normalizeHighlights(raw?.highlights),
     goodreads_url: isSafeUrl(raw?.goodreads_url) ? raw.goodreads_url.trim() : null,
     external_url: isSafeUrl(raw?.external_url) ? raw.external_url.trim() : null,

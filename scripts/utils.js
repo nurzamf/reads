@@ -10,6 +10,17 @@ export function normalizeWhitespace(value) {
   return value.trim().replace(/\s+/g, ' ');
 }
 
+export function normalizeMultilineText(value) {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t\f\v]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function slugify(value) {
   const cleaned = normalizeWhitespace(value).toLowerCase();
   return (

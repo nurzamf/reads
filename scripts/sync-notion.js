@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateAndSanitiseBooks } from './data-validator.js';
+import { enrichBooksMetadata } from './goodreads-enricher.js';
 import {
+  isPrivatePropertyName,
   loadMappingConfig,
   mapNotionPageToBook,
   resolveSchemaMapping,
@@ -10,8 +12,10 @@ import {
   extractNotionDatabaseId,
   fetchNotionApi,
   loadLocalEnv,
+  normalizeMultilineText,
   normalizeNotionToken,
   readJsonSafe,
+  sleep,
   writeJsonAtomic,
 } from './utils.js';
 
@@ -48,6 +52,181 @@ async function fetchAllDatabasePages(databaseId, token, notionVersion) {
   return pages;
 }
 
+function richTextToPlain(richTextArr) {
+  if (!Array.isArray(richTextArr)) return '';
+  return richTextArr.map((item) => item?.plain_text || '').join('');
+}
+
+async function fetchBlockChildren(blockId, token, notionVersion) {
+  const blocks = [];
+  let startCursor = undefined;
+
+  do {
+    const qs = new URLSearchParams({ page_size: '100' });
+    if (startCursor) qs.set('start_cursor', startCursor);
+
+    const data = await fetchNotionApi(
+      `https://api.notion.com/v1/blocks/${encodeURIComponent(blockId)}/children?${qs.toString()}`,
+      { method: 'GET' },
+      { token, notionVersion }
+    );
+
+    if (Array.isArray(data.results)) {
+      blocks.push(...data.results);
+    }
+    startCursor = data.has_more ? data.next_cursor : undefined;
+  } while (startCursor);
+
+  return blocks;
+}
+
+async function extractBlocksText(blocks, token, notionVersion, privatePatterns = [], depth = 0) {
+  const sections = [];
+  let skipPrivateSection = false;
+  let listCounter = 0;
+
+  for (const block of blocks) {
+    if (!block || !block.type || block.archived || block.in_trash) continue;
+    const type = block.type;
+    const payload = block[type];
+
+    const isHeading = type === 'heading_1' || type === 'heading_2' || type === 'heading_3';
+    if (isHeading) {
+      const headingText = richTextToPlain(payload?.rich_text).trim();
+      if (isPrivatePropertyName(headingText, privatePatterns)) {
+        skipPrivateSection = true;
+        continue;
+      }
+      skipPrivateSection = false;
+      listCounter = 0;
+      if (headingText) {
+        sections.push({ kind: 'para', text: headingText });
+      }
+      continue;
+    }
+
+    if (skipPrivateSection) continue;
+
+    if (type !== 'numbered_list_item') {
+      listCounter = 0;
+    }
+
+    let lineText = '';
+    let kind = 'para';
+
+    switch (type) {
+      case 'paragraph':
+      case 'quote':
+      case 'callout':
+      case 'toggle':
+        lineText = richTextToPlain(payload?.rich_text).trim();
+        break;
+      case 'bulleted_list_item':
+        lineText = richTextToPlain(payload?.rich_text).trim();
+        if (lineText) lineText = `• ${lineText}`;
+        kind = 'list';
+        break;
+      case 'numbered_list_item':
+        listCounter += 1;
+        lineText = richTextToPlain(payload?.rich_text).trim();
+        if (lineText) lineText = `${listCounter}. ${lineText}`;
+        kind = 'list';
+        break;
+      case 'to_do':
+        lineText = richTextToPlain(payload?.rich_text).trim();
+        if (lineText) lineText = `${payload?.checked ? '[x]' : '[ ]'} ${lineText}`;
+        kind = 'list';
+        break;
+      case 'code':
+        lineText = richTextToPlain(payload?.rich_text).trim();
+        break;
+      default:
+        break;
+    }
+
+    if (lineText) {
+      sections.push({ kind, text: lineText });
+    }
+
+    const canRecurse =
+      block.has_children &&
+      depth < 3 &&
+      type !== 'child_page' &&
+      type !== 'child_database';
+
+    if (canRecurse) {
+      const children = await fetchBlockChildren(block.id, token, notionVersion);
+      const childText = await extractBlocksText(
+        children,
+        token,
+        notionVersion,
+        privatePatterns,
+        depth + 1
+      );
+      if (childText) {
+        sections.push({ kind: 'para', text: childText });
+      }
+    }
+  }
+
+  let output = '';
+  for (let i = 0; i < sections.length; i += 1) {
+    const curr = sections[i];
+    const prev = sections[i - 1];
+    if (i === 0) {
+      output += curr.text;
+    } else if (curr.kind === 'list' && prev?.kind === 'list') {
+      output += `\n${curr.text}`;
+    } else {
+      output += `\n\n${curr.text}`;
+    }
+  }
+
+  return normalizeMultilineText(output) || null;
+}
+
+async function fetchAllPageBodyReviews(pages, existingBooks, token, notionVersion, config) {
+  const existingByPageId = new Map();
+  for (const prev of existingBooks || []) {
+    if (prev.notion_page_id) existingByPageId.set(prev.notion_page_id, prev);
+  }
+
+  const reviewsByPageId = new Map();
+  let cursor = 0;
+  let reviewsFound = 0;
+  const concurrency = 3;
+
+  async function worker() {
+    while (cursor < pages.length) {
+      const page = pages[cursor];
+      cursor += 1;
+      try {
+        const blocks = await fetchBlockChildren(page.id, token, notionVersion);
+        const bodyReview = await extractBlocksText(
+          blocks,
+          token,
+          notionVersion,
+          config.privateFieldPatterns || []
+        );
+        if (bodyReview) {
+          reviewsByPageId.set(page.id, bodyReview);
+          reviewsFound += 1;
+        }
+      } catch (err) {
+        console.warn(`Failed fetching page body for ${page.id}: ${err.message}`);
+        const fallback = existingByPageId.get(page.id)?.review || null;
+        if (fallback) {
+          reviewsByPageId.set(page.id, fallback);
+        }
+      }
+      await sleep(120);
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return { reviewsByPageId, reviewsFound };
+}
+
 export async function syncNotion() {
   loadLocalEnv();
   const token = normalizeNotionToken(process.env.NOTION_TOKEN);
@@ -60,7 +239,7 @@ export async function syncNotion() {
   const config = loadMappingConfig();
   const existingData = readJsonSafe(OUTPUT_PATH);
 
-  console.log('1/4 Inspecting Notion database schema...');
+  console.log('1/5 Inspecting Notion database schema...');
   const database = await fetchNotionApi(
     `https://api.notion.com/v1/databases/${encodeURIComponent(databaseId)}`,
     { method: 'GET' },
@@ -77,12 +256,36 @@ export async function syncNotion() {
     );
   }
 
-  console.log('2/4 Retrieving records from Notion with pagination...');
+  console.log('2/5 Retrieving records from Notion with pagination...');
   const pages = await fetchAllDatabasePages(databaseId, token, config.notionVersion);
 
-  console.log('3/4 Transforming and sanitising public book records...');
-  const mappedBooks = pages.map((page) => mapNotionPageToBook(page, resolution.mapping, config));
-  const { books, warnings } = validateAndSanitiseBooks(mappedBooks, config);
+  console.log('3/5 Fetching Notion page body reviews...');
+  const { reviewsByPageId, reviewsFound } = await fetchAllPageBodyReviews(
+    pages,
+    existingData?.books || [],
+    token,
+    config.notionVersion,
+    config
+  );
+  console.log(`Extracted page body reviews from ${reviewsFound} Notion entries.`);
+
+  console.log('4/5 Mapping records and enriching book metadata from Goodreads & Open Library...');
+  const mappedBooks = pages.map((page) => {
+    const mapped = mapNotionPageToBook(page, resolution.mapping, config);
+    const bodyReview = reviewsByPageId.get(page.id);
+    if (bodyReview) {
+      mapped.review = mapped.review ? `${mapped.review}\n\n${bodyReview}` : bodyReview;
+    }
+    return mapped;
+  });
+
+  const { books: enrichedBooks, fetchedCount, reusedCount } = await enrichBooksMetadata(mappedBooks, {
+    existingBooks: existingData?.books || [],
+    formatMap: config.formatMap || {},
+  });
+  console.log(`Book metadata enrichment complete (fetched=${fetchedCount}, reused=${reusedCount}).`);
+
+  const { books, warnings } = validateAndSanitiseBooks(enrichedBooks, config);
 
   for (const warning of warnings) {
     console.warn(`Validation warning: ${warning}`);
@@ -122,8 +325,8 @@ export async function syncNotion() {
   }
 
   if (!wasSampleData && existingBooksJson === nextBooksJson) {
-    console.log('4/4 No changes detected in library data. Skipping write to avoid unnecessary commits.');
-    return { updated: false, count: books.length, schemaSummary, resolution };
+    console.log('5/5 No changes detected in library data. Skipping write to avoid unnecessary commits.');
+    return { updated: false, count: books.length, reviewsFound, schemaSummary, resolution };
   }
 
   const nextPayload = {
@@ -135,8 +338,8 @@ export async function syncNotion() {
   };
 
   writeJsonAtomic(OUTPUT_PATH, nextPayload);
-  console.log(`4/4 Successfully published ${books.length} books to data/library.json.`);
-  return { updated: true, count: books.length, schemaSummary, resolution };
+  console.log(`5/5 Successfully published ${books.length} books to data/library.json.`);
+  return { updated: true, count: books.length, reviewsFound, schemaSummary, resolution };
 }
 
 const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
