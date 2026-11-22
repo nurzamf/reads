@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#FFF9EB"/>
+  <rect x="0" y="0" width="20" height="450" fill="#F36B55"/>
+  <line x1="20" y1="0" x2="20" y2="450" stroke="#171B35" stroke-width="3"/>
+  <rect x="44" y="130" width="222" height="222" rx="18" fill="#DCE5FF" stroke="#171B35" stroke-width="3"/>
+  <circle cx="155" cy="241" r="68" fill="#FFD84D" stroke="#171B35" stroke-width="3"/>
+  <g stroke="#171B35" stroke-width="3" stroke-linecap="round">
+    <line x1="155" y1="148" x2="155" y2="164"/>
+    <line x1="155" y1="318" x2="155" y2="334"/>
+    <line x1="62" y1="241" x2="78" y2="241"/>
+    <line x1="232" y1="241" x2="248" y2="241"/>
+  </g>
+  <text x="155" y="70" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#171B35">KLARA AND</text>
+  <text x="155" y="98" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#3155E7">THE SUN</text>
+  <text x="155" y="400" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="14" fill="#171B35" letter-spacing="1.2">KAZUO ISHIGURO</text>
+</svg>

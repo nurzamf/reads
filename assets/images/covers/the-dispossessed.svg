@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#3155E7"/>
+  <rect x="0" y="0" width="20" height="450" fill="#FFD84D"/>
+  <line x1="20" y1="0" x2="20" y2="450" stroke="#171B35" stroke-width="3"/>
+  <rect x="48" y="128" width="214" height="206" rx="14" fill="#FFF9EB" stroke="#171B35" stroke-width="3"/>
+  <path d="M84 294L155 162L226 294H84Z" fill="#FFD84D" stroke="#171B35" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="155" cy="242" r="24" fill="#F36B55" stroke="#171B35" stroke-width="3"/>
+  <text x="155" y="70" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#FFFFFF">THE DISPOSSESSED</text>
+  <text x="155" y="392" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="13" fill="#FFD84D" letter-spacing="1.4">URSULA K. LE GUIN</text>
+</svg>

@@ -1,0 +1,1416 @@
+# MASTER PROJECT PROMPT: NURZAM’S LIBRARY
+
+## 1. Project Overview
+
+Build a complete, responsive, public-facing personal book library website called **Nurzam’s Library**.
+
+The website will serve as a digital catalogue of my personal reading collection. Visitors can explore my books, discover what I am currently reading, browse completed books, view my wishlist, explore authors and genres, and follow my reading history and statistics.
+
+The website must use **Notion as the single source of truth for all book data**. I will manage, add, edit, and delete books exclusively through my Notion database. The website must automatically retrieve and publish the latest data from Notion every 30 minutes.
+
+The project must be lightweight, maintainable, inexpensive to host, and suitable for deployment through GitHub Pages.
+
+### Core principles
+
+1. Notion is the only content-management interface.
+2. The website is publicly accessible and read-only.
+3. Book data synchronises automatically every 30 minutes.
+4. Use HTML, CSS, and vanilla JavaScript for the frontend.
+5. Use GitHub Actions for scheduled Notion synchronisation.
+6. Host the website using GitHub Pages.
+7. Follow a distinctive **Playful Neo-Brutalist design system**.
+8. Prioritise usability, readability, performance, accessibility, and responsive behaviour.
+9. Avoid unnecessary frameworks, dependencies, services, and infrastructure.
+
+---
+
+## 2. Technology Stack
+
+Use the following architecture.
+
+### Frontend
+
+- HTML5
+- CSS3
+- Vanilla JavaScript (ES6+)
+- JSON for published library data
+- Google Fonts for typography
+- Lucide Icons or inline SVG icons
+
+Do not use:
+- React
+- Next.js
+- Vue
+- Angular
+- TypeScript
+- Vite
+- Tailwind CSS
+- Bootstrap
+- Express
+- A continuously running Node.js server
+- A separate database
+
+The frontend should be framework-free and run as a static website.
+
+### Synchronisation
+
+Use:
+- Notion API
+- Node.js for the scheduled synchronisation script only
+- GitHub Actions
+- GitHub Repository Secrets
+- Generated JSON files
+
+Node.js is permitted in the GitHub Actions environment for fetching and processing Notion data. It must not be required to run the public website.
+
+### Hosting
+
+- GitHub Pages
+- GitHub Actions for automated deployment and synchronisation
+
+---
+
+## 3. System Architecture
+
+Implement the following architecture:
+
+```text
+                    NOTION
+              (Book Database)
+                     |
+                     |
+                Notion API
+                     |
+                     v
+              GITHUB ACTIONS
+             (Every 30 Minutes)
+                     |
+          Fetch and transform data
+                     |
+          Validate and sanitise data
+                     |
+                     v
+               library.json
+                     |
+                     |
+                GITHUB PAGES
+                     |
+                     v
+             NURZAM'S LIBRARY
+              Public Website
+```
+
+### How it works
+
+1. I manage my books inside Notion.
+2. GitHub Actions runs automatically every 30 minutes.
+3. The synchronisation script retrieves the latest database records using the Notion API.
+4. It transforms Notion properties into a consistent public JSON structure.
+5. It validates the data and excludes any fields that should not be publicly exposed.
+6. It generates or updates the public JSON data.
+7. GitHub Pages serves the updated website and library data.
+
+### Important implementation requirements
+
+- The Notion integration token must never appear in frontend JavaScript, HTML, CSS, or publicly accessible JSON.
+- Store the Notion integration token in GitHub Secrets.
+- Store the Notion database ID in GitHub Secrets or repository configuration.
+- Do not expose private Notion properties.
+- Do not make the public website depend on direct Notion API requests.
+- Avoid committing secrets or credentials.
+- Avoid unnecessary commits when the generated library data has not changed.
+- Handle Notion API pagination correctly.
+- Handle API rate limits, transient errors, and failed synchronisation gracefully.
+- Do not overwrite valid published data with an empty or incomplete result caused by an API failure.
+- Preserve the last successfully generated JSON if synchronisation fails.
+- Log synchronisation results and errors in GitHub Actions.
+
+### Synchronisation frequency
+
+Configure GitHub Actions to run every 10 minutes:
+
+```yaml
+schedule:
+  - cron: "*/10 * * * *"
+```
+
+Also support manual execution through `workflow_dispatch`.
+
+GitHub Actions scheduled workflows can be delayed occasionally. Do not promise exact real-time synchronisation at precisely 30-minute intervals.
+
+---
+
+## 4. Design Direction: Playful Neo-Brutalism
+
+**This is a critical requirement. Do not use a generic minimalist editorial design.**
+
+The website must follow a distinctive visual identity inspired by Playful Neo-Brutalism.
+
+The overall design should feel:
+
+- Playful
+- Bold
+- Expressive
+- Contemporary
+- Friendly
+- Editorial
+- Structured
+- Visually distinctive
+- Slightly unconventional without sacrificing usability
+
+The design should combine the visual confidence of neo-brutalism with the warmth and personality of an independent bookshop or personal reading journal.
+
+### 4.1 Colour palette
+
+Use the following core colours:
+
+| Colour | Hex | Usage |
+|---|---|---|
+| Electric Blue | `#3155E7` | Primary brand colour, hero backgrounds, prominent sections |
+| Bright Yellow | `#FFD84D` | Highlights, badges, statistics, decorative accents |
+| Deep Navy | `#171B35` | Borders, text, outlines, dark sections |
+| Warm Cream | `#FFF9EB` | Main page background |
+| White | `#FFFFFF` | Cards and content surfaces |
+| Coral Red | `#F36B55` | Secondary accents, labels, interactive details |
+| Soft Blue | `#DCE5FF` | Secondary backgrounds and subtle highlights |
+
+You may introduce additional shades when necessary, but the main visual identity must remain recognisable.
+
+Do not turn every section into a different colour. Maintain a consistent and deliberate colour hierarchy.
+
+### 4.2 Typography
+
+Use a combination of expressive display typography and highly readable body typography.
+
+Suggested fonts:
+
+- **Display:** Space Grotesk, Fredoka, or a similar bold geometric typeface.
+- **Body:** DM Sans, Plus Jakarta Sans, or Inter.
+
+Typography requirements:
+
+- Large, bold, expressive page headings.
+- Strong visual hierarchy.
+- Comfortable body-text readability.
+- Clear numerical typography for statistics.
+- Avoid excessively small text.
+- Use uppercase labels selectively.
+- Use font weights intentionally.
+
+### 4.3 Borders and shapes
+
+Use neo-brutalist visual characteristics:
+
+- Thick, dark outlines.
+- Visible offset box shadows.
+- Strong contrast between foreground and background.
+- Chunky buttons.
+- Rounded rectangular components.
+- Pill-shaped labels where appropriate.
+- Slightly exaggerated visual proportions.
+- Clear separation between content areas.
+
+Suggested styling:
+
+```css
+:root {
+  --color-blue: #3155E7;
+  --color-yellow: #FFD84D;
+  --color-navy: #171B35;
+  --color-cream: #FFF9EB;
+  --color-white: #FFFFFF;
+  --color-coral: #F36B55;
+  --color-soft-blue: #DCE5FF;
+
+  --border-width: 2px;
+  --border-color: #171B35;
+  --shadow-offset: 5px;
+}
+```
+
+Example component treatment:
+
+```css
+.neo-card {
+  background: var(--color-white);
+  border: 2px solid var(--color-navy);
+  border-radius: 14px;
+  box-shadow: 5px 5px 0 var(--color-navy);
+}
+```
+
+Do not apply the same shadow treatment indiscriminately to every element. Use visual emphasis selectively.
+
+### 4.4 Layout principles
+
+- Use a structured grid-based layout.
+- Allow sections to have distinct visual identities.
+- Combine large editorial headings with compact information panels.
+- Use generous spacing.
+- Avoid excessive card nesting.
+- Avoid excessive decorative elements.
+- Maintain consistent alignment.
+- Make book covers visually prominent.
+- Use asymmetrical layouts selectively.
+- Keep navigation intuitive.
+
+### 4.5 Interaction and animation
+
+Use subtle, purposeful interactions:
+
+- Buttons move slightly when hovered or pressed.
+- Cards may have a small hover lift.
+- Shadows respond to interaction.
+- Navigation indicates the active page.
+- Filters and sorting update smoothly.
+- Use lightweight transitions.
+- Respect `prefers-reduced-motion`.
+
+Avoid excessive animations, parallax effects, and unnecessary motion.
+
+---
+
+## 5. Website Structure and Navigation
+
+Create the following main sections.
+
+### Primary navigation
+
+1. Home / Library
+2. To Read
+3. Read
+4. Wishlist
+5. Genre
+6. Author
+7. History
+8. Search
+
+Use a responsive navigation system.
+
+On desktop, use a horizontal navigation bar or a compact navigation layout that complements the visual design.
+
+On mobile, provide a space-efficient navigation pattern, such as a collapsible menu or compact navigation bar.
+
+The active section must be visually distinguishable.
+
+Each section must have a meaningful page title, description, and content layout.
+
+---
+
+## 6. Page Requirements
+
+### 6.1 Home / Library
+
+This is the main landing page and the central overview of the entire collection.
+
+It should immediately communicate the identity of the library and provide an overview of my reading collection.
+
+Include:
+
+**A. Hero section**
+
+- Website title: Nurzam’s Library.
+- A short introductory statement.
+- A prominent total-books statistic.
+- A visually interesting book-cover arrangement or featured book display.
+- A clear entry point to browse the library.
+
+Suggested introductory copy:
+
+"An evolving collection of stories, ideas, and worlds worth exploring."
+
+The copy can be refined, but maintain a personal and editorial tone.
+
+**B. Reading statistics**
+
+Display useful collection statistics:
+
+- Total books.
+- Books read.
+- Currently reading.
+- To Be Read.
+- Wishlist.
+- Average rating, where meaningful.
+
+Statistics must be calculated dynamically from the published JSON data.
+
+Do not hardcode numerical values.
+
+**C. Currently Reading**
+
+Display books with the Reading status.
+
+Each book should show:
+
+- Cover.
+- Title.
+- Author.
+- Current page, if available.
+- Total pages, if available.
+- Reading progress percentage, if possible.
+
+Progress formula:
+
+`(current_page / total_pages) * 100`
+
+Clamp the result between 0 and 100.
+
+If page information is unavailable, display the book without a progress bar.
+
+**D. Featured books**
+
+Display a selection of books based on available data, such as:
+
+- Favourite books.
+- Highly rated books.
+- Recently added books.
+- Recently completed books.
+
+Do not invent featured information.
+
+**E. Recently added**
+
+Show the most recently added books.
+
+**F. Browse by genre**
+
+Display a selection of genres with the number of associated books.
+
+**G. Reading activity**
+
+Provide a compact overview of recent reading activity or yearly reading progress.
+
+**H. Explore the library**
+
+Include links to the main sections.
+
+---
+
+### 6.2 To Read
+
+Display books that have the To Be Read status.
+
+This page should help me discover what to read next.
+
+Include:
+
+**A. AI Curated Next Up**
+
+This is an important feature.
+
+Create an automatically generated reading recommendation section that prioritises books based on my reading history and preferences.
+
+The system should consider:
+
+1. Historical ratings.
+2. Genre preferences.
+3. Author familiarity.
+4. Reading length.
+5. Reading pace and variety.
+6. Previously completed books.
+7. Favourite authors or genres, when the data supports them.
+
+The recommendations must be generated automatically.
+
+I do not want to manually rearrange a reading queue or assign a position to every book.
+
+The recommendation engine should calculate a ranking whenever the library data changes or when the website loads.
+
+**Recommended initial implementation:**
+
+Use a transparent, rule-based recommendation algorithm in JavaScript.
+
+Do not require a paid AI API or a continuously running backend.
+
+Suggested scoring logic:
+
+- Genre affinity: prioritise genres associated with my higher-rated completed books.
+- Author familiarity: give a modest preference to authors I have previously rated positively.
+- Reading-length balance: favour shorter books after completing a particularly long book.
+- Reading variety: occasionally recommend books from genres I have not read recently.
+- Personal favourites: consider favourite authors and books when those properties exist.
+
+Use a weighted scoring model.
+
+Example conceptual weights:
+
+| Factor | Suggested Weight |
+|---|---:|
+| Genre affinity | 40% |
+| Author familiarity | 20% |
+| Reading-length balance | 20% |
+| Reading variety | 15% |
+| Other relevant preferences | 5% |
+
+These weights should be configurable in the recommendation module.
+
+Do not fabricate reading preferences when insufficient data exists.
+
+When there is not enough reading history, use sensible fallback behaviour:
+
+- Prioritise highly rated books, if ratings exist.
+- Otherwise, show a varied selection of To Be Read books.
+- Explain that recommendations will improve as more reading history becomes available.
+
+Display a brief explanation of why a book was recommended, such as:
+
+- "Matches your favourite genres."
+- "A familiar author."
+- "A shorter read after a long book."
+- "A chance to explore something different."
+
+Do not claim that this initial rule-based system is using an LLM or performing genuine generative AI reasoning.
+
+Keep the recommendation engine modular so that a real AI provider can be integrated later without rebuilding the website.
+
+**B. All To Read books**
+
+Display all To Be Read books in a responsive grid.
+
+Include:
+
+- Cover.
+- Title.
+- Author.
+- Genre.
+- Page count, when available.
+- Publication year, when available.
+- Rating, if available.
+
+Provide sorting and filtering.
+
+Possible sorting options:
+
+- Recently added.
+- Title.
+- Author.
+- Page count.
+- Publication year.
+- Rating.
+
+---
+
+### 6.3 Read
+
+Display all books with the Read status.
+
+Include:
+
+- Book cover.
+- Title.
+- Author.
+- Genre.
+- Rating.
+- Date finished, if available.
+- Reading format.
+
+Provide:
+
+- Search.
+- Genre filter.
+- Author filter.
+- Year finished filter.
+- Rating filter.
+- Sorting.
+
+Allow visitors to switch between grid and list views if practical.
+
+Books marked as DNF must not be counted as completed books.
+
+---
+
+### 6.4 Wishlist
+
+Display all books with the Wishlist status.
+
+The wishlist is public.
+
+Include:
+
+- Book cover.
+- Title.
+- Author.
+- Genre.
+- Publication information, if available.
+- External book links, if available.
+
+This page should feel like a personal book discovery list.
+
+Do not add shopping or purchasing functionality.
+
+---
+
+### 6.5 Genre
+
+Create a genre directory.
+
+Display all genres represented in the library.
+
+Each genre should show:
+
+- Genre name.
+- Number of books.
+- A representative book cover or visual.
+- A short description, if available.
+
+When a visitor selects a genre, display the books belonging to that genre.
+
+Support books with multiple genres.
+
+Avoid creating duplicate genre entries due to inconsistent capitalisation or whitespace.
+
+For example, "Science Fiction" and "science fiction" must be treated as the same genre.
+
+---
+
+### 6.6 Author
+
+Create an author directory.
+
+Display unique authors represented in the library.
+
+Each author entry should show:
+
+- Author name.
+- Number of books.
+- Representative book cover.
+- Author biography, if available.
+
+When a visitor selects an author, display all associated books.
+
+Author names must be normalised carefully to avoid duplicate entries caused by inconsistent formatting.
+
+Do not invent author biographies or personal information.
+
+---
+
+### 6.7 History
+
+Create a chronological reading history page.
+
+The purpose is to document my reading journey over time.
+
+Include:
+
+**A. Yearly statistics**
+
+For each year, display:
+
+- Books completed.
+- Total pages read, if page information is available.
+- Average rating.
+- Most-read genre.
+- Reading format distribution, where data exists.
+
+**B. Reading timeline**
+
+Display completed books in chronological order based on their finished dates.
+
+Each timeline entry should include:
+
+- Book cover.
+- Title.
+- Author.
+- Date started, if available.
+- Date finished.
+- Rating.
+- Reading format.
+
+**C. Year selector**
+
+Allow visitors to switch between years.
+
+**D. Reading activity visualisation**
+
+Use a simple visual representation of reading activity across the year.
+
+Do not invent completion dates or include books without a valid finished date in date-specific calculations.
+
+Clearly distinguish unavailable data from zero values.
+
+---
+
+### 6.8 Search
+
+Provide a global search interface.
+
+Search should cover:
+
+- Book title.
+- Author.
+- Genre.
+- Publisher.
+- ISBN, if available.
+- Description, if available.
+
+Search should be responsive and update results without requiring a page reload.
+
+Include:
+
+- Search input.
+- Clear button.
+- Result count.
+- Empty state.
+- No-results message.
+
+Search results should link to the relevant book detail page or view.
+
+---
+
+## 7. Book Detail View
+
+Every book should have a dedicated detail view.
+
+It may be implemented as a dynamic route, query-based view, or another GitHub Pages-compatible approach.
+
+The detail view should display all available public information.
+
+### Book information
+
+- Book cover.
+- Title.
+- Author.
+- Description.
+- Publication year.
+- Publisher.
+- ISBN.
+- Language.
+- Original language.
+- Page count.
+- Format.
+- Genre.
+- Secondary genre.
+- Reading status.
+- Ownership status, if available.
+- Rating.
+- Favourite indicator.
+- Date added.
+- Date started.
+- Date finished.
+- Goodreads URL, if available.
+- Other external links, if available.
+
+### Reading information
+
+When available, display:
+
+- Current page.
+- Reading progress.
+- Reading start date.
+- Reading completion date.
+- Reading format.
+
+### Review and notes
+
+Display public reviews and notes only when explicitly designated for public display.
+
+Never expose private notes.
+
+### Highlights
+
+If the Notion database contains book highlights, support displaying highlights that are explicitly marked Public.
+
+Do not publish highlights marked Private.
+
+### Related books
+
+Suggest other books based on:
+
+- Shared genres.
+- Same author.
+- Similar topics.
+
+Do not show the current book as its own recommendation.
+
+---
+
+## 8. Notion Database Integration
+
+Notion must be the single source of truth.
+
+The implementation must support retrieving records from a Notion database and transforming them into a consistent internal data model.
+
+### Important: Inspect the actual Notion schema
+
+Do not assume that my existing Notion database uses exactly the property names or structures described in this prompt.
+
+Before implementing the synchronisation script:
+
+1. Inspect the actual Notion database schema through the Notion API.
+2. Identify available properties and their types.
+3. Map those properties to the internal book data model.
+4. Create a configurable property-mapping layer.
+5. Document missing or unsupported properties.
+6. Avoid silently discarding available information.
+
+If a required property is missing, explain what needs to be added or mapped.
+
+Do not modify the Notion database automatically.
+
+### Supported book status values
+
+Reading status:
+
+- DNF
+- Reading
+- To Be Read
+- Read
+- Wishlist
+
+Format:
+
+- Paperback
+- Hardback
+- Audiobook
+- Ebook/Kindle
+
+These values should be supported exactly, including the ability to add more values later.
+
+If the actual Notion database uses different labels, map them through configuration rather than requiring me to rename every record.
+
+### Suggested internal data model
+
+Use a consistent internal structure similar to:
+
+```json
+{
+  "id": "unique-book-id",
+  "slug": "example-book-title",
+  "notion_page_id": "notion-page-id",
+  "title": "Example Book",
+  "author": "Example Author",
+  "cover_url": "https://example.com/cover.jpg",
+  "description": "Book description",
+  "language": "English",
+  "original_language": "Arabic",
+  "publication_year": 2024,
+  "publisher": "Example Publisher",
+  "isbn": "9780000000000",
+  "pages": 320,
+  "format": "Paperback",
+  "status": "Read",
+  "current_page": null,
+  "rating": 5,
+  "favourite": false,
+  "genres": [
+    "Literary Fiction",
+    "Historical Fiction"
+  ],
+  "date_added": "2026-01-01",
+  "date_started": "2026-01-02",
+  "date_finished": "2026-01-15",
+  "review": "Public review, if available",
+  "goodreads_url": "https://www.goodreads.com/"
+}
+```
+
+This is an example structure, not a requirement to force every property into Notion.
+
+Use null or omit unavailable values appropriately.
+
+### Data handling requirements
+
+- Support multiple genres per book.
+- Support missing covers.
+- Support missing descriptions.
+- Support books without ratings.
+- Support incomplete reading dates.
+- Support different reading formats.
+- Support books with no page count.
+- Support multiple books by the same author.
+- Support duplicate detection.
+- Preserve stable identifiers.
+- Normalise text values consistently.
+
+A missing value must not break the website.
+
+---
+
+## 9. Public JSON Generation
+
+Generate a public JSON file containing the sanitised library data.
+
+Suggested location:
+
+`data/library.json`
+
+Suggested structure:
+
+```json
+{
+  "last_updated": "2026-11-22T12:00:00Z",
+  "total_books": 0,
+  "books": []
+}
+```
+
+The actual total and book records must be generated dynamically.
+
+The frontend must load this file and calculate:
+
+- Total books.
+- Reading statistics.
+- Genre counts.
+- Author counts.
+- Reading history.
+- Recommendations.
+- Filters.
+- Search results.
+
+Do not duplicate calculated values unnecessarily.
+
+### Data privacy
+
+The public JSON is accessible to anyone.
+
+Only include information intended for public consumption.
+
+Never include:
+
+- Notion integration tokens.
+- API keys.
+- Private notes.
+- Private highlights.
+- Internal authentication information.
+- Unnecessary Notion metadata.
+- Private properties.
+
+If a field is not explicitly public, exclude it by default.
+
+---
+
+## 10. Book Metadata and Cover Images
+
+Book covers are important to the visual identity of the website.
+
+Use the cover image URL stored in Notion whenever available.
+
+Requirements:
+
+- Display cover images with consistent proportions.
+- Preserve the original image aspect ratio.
+- Use `object-fit: cover` where appropriate.
+- Provide a fallback cover when the image is unavailable.
+- Use lazy loading for off-screen images.
+- Handle broken image URLs gracefully.
+- Avoid layout shifts while images load.
+
+If a cover is missing, use a designed placeholder that matches the Neo-Brutalist visual identity.
+
+Do not display broken-image icons.
+
+Do not make the frontend dependent on scraping Goodreads.
+
+If metadata enrichment is required in the future, make it an optional, modular process using appropriate book metadata services such as Google Books or Open Library.
+
+The Notion record remains authoritative for manually maintained information.
+
+Do not overwrite manually maintained Notion information with automatically retrieved metadata.
+
+---
+
+## 11. Statistics and Calculations
+
+All statistics must be calculated from the available book records.
+
+Implement a dedicated statistics module.
+
+Examples:
+
+- Total collection size.
+- Number of books read.
+- Number of books currently being read.
+- Number of books to read.
+- Number of wishlist books.
+- Number of DNF books.
+- Average rating.
+- Total pages read.
+- Books completed per year.
+- Reading format distribution.
+- Genre distribution.
+- Author distribution.
+
+### Calculation rules
+
+- Only books with status Read count as completed.
+- DNF books must not count as completed.
+- Wishlist books must not count as To Be Read.
+- Do not count missing page counts as zero pages.
+- Do not include unrated books in average-rating calculations.
+- Do not include invalid or missing dates in date-based statistics.
+- Avoid dividing by zero.
+- Clearly distinguish an unavailable statistic from a genuine zero.
+
+---
+
+## 12. Responsive Design
+
+The website must be fully responsive.
+
+Support:
+
+- Desktop.
+- Laptop.
+- Tablet.
+- Mobile.
+
+### Desktop
+
+- Make good use of available horizontal space.
+- Use structured multi-column layouts.
+- Display book covers at comfortable sizes.
+- Keep navigation accessible.
+- Use visual hierarchy to distinguish major sections.
+
+### Tablet
+
+- Adapt grids and spacing.
+- Maintain readable text.
+- Prevent horizontal overflow.
+- Ensure navigation remains usable.
+
+### Mobile
+
+- Prioritise the reading experience.
+- Use one- or two-column book grids depending on available width.
+- Make controls touch-friendly.
+- Avoid tiny buttons.
+- Avoid overly dense statistics.
+- Ensure book covers remain legible.
+- Stack content sections naturally.
+- Use a mobile-friendly navigation pattern.
+
+Do not simply shrink the desktop design. Reconsider the layout for smaller screens.
+
+---
+
+## 13. Accessibility
+
+Follow WCAG 2.2 AA principles where practical.
+
+Implement:
+
+- Semantic HTML.
+- Correct heading hierarchy.
+- Keyboard-accessible navigation.
+- Visible focus states.
+- Sufficient colour contrast.
+- Accessible form labels.
+- Descriptive button labels.
+- Appropriate image alt text.
+- Reduced-motion support.
+- Accessible filter and search controls.
+
+Do not rely on colour alone to communicate status.
+
+---
+
+## 14. Performance
+
+The website should load quickly, including on slower connections.
+
+Requirements:
+
+- No frontend framework.
+- No unnecessary JavaScript libraries.
+- Lazy-load book covers.
+- Minimise unnecessary DOM updates.
+- Avoid repeated JSON requests.
+- Use efficient filtering and sorting.
+- Cache data appropriately within the current session.
+- Prevent layout shifts.
+- Avoid unnecessarily large images.
+- Keep CSS and JavaScript modular.
+
+Do not introduce complex infrastructure to solve simple frontend problems.
+
+---
+
+## 15. Project File Structure
+
+Use a modular structure similar to:
+
+```text
+nurzams-library/
+│
+├── index.html
+├── README.md
+├── .gitignore
+│
+├── assets/
+│   ├── css/
+│   │   ├── style.css
+│   │   ├── components.css
+│   │   └── responsive.css
+│   │
+│   ├── js/
+│   │   ├── app.js
+│   │   ├── data.js
+│   │   ├── navigation.js
+│   │   ├── library.js
+│   │   ├── book-detail.js
+│   │   ├── recommendations.js
+│   │   ├── statistics.js
+│   │   ├── search.js
+│   │   ├── filters.js
+│   │   └── utils.js
+│   │
+│   └── images/
+│       ├── logo.svg
+│       └── placeholder-cover.svg
+│
+├── data/
+│   └── library.json
+│
+├── scripts/
+│   ├── sync-notion.js
+│   ├── notion-mapper.js
+│   ├── data-validator.js
+│   └── utils.js
+│
+└── .github/
+    └── workflows/
+        ├── sync-notion.yml
+        └── deploy.yml
+```
+
+You may adjust the structure when technically justified, but keep it understandable and maintainable.
+
+Do not introduce unnecessary files or dependencies.
+
+---
+
+## 16. GitHub Actions
+
+Create the required workflow files.
+
+### Synchronisation workflow
+
+The workflow must:
+
+1. Run every 30 minutes.
+2. Support manual execution.
+3. Install the minimum required dependencies.
+4. Retrieve data from Notion.
+5. Handle pagination.
+6. Transform the records.
+7. Validate the generated data.
+8. Generate `data/library.json`.
+9. Commit changes only when the data has changed.
+10. Report success or failure clearly.
+
+Use repository secrets:
+
+- `NOTION_TOKEN`
+- `NOTION_DATABASE_ID`
+
+Use the minimum permissions necessary.
+
+### Deployment workflow
+
+Configure GitHub Pages deployment.
+
+Ensure that:
+
+- The website can be deployed from the repository.
+- The public JSON is included in the deployed output.
+- Relative asset paths work under a GitHub Pages project URL.
+- Internal navigation works when hosted under a repository subpath.
+- The website does not assume it is hosted at the domain root.
+
+If combining synchronisation and deployment into one workflow is more reliable, that is acceptable. Avoid unnecessary workflow complexity.
+
+---
+
+## 17. Error Handling and Empty States
+
+Every section must handle missing data gracefully.
+
+Examples:
+
+- No books found.
+- No books currently being read.
+- No reading history available.
+- No author biography available.
+- No cover image.
+- No search results.
+- No rating available.
+- No finished date.
+- Library data temporarily unavailable.
+
+Use designed empty states that match the visual identity.
+
+Do not display raw JavaScript errors to visitors.
+
+If the JSON cannot be loaded, show a useful error message and provide a retry option.
+
+The last successfully published library data should remain available if a later Notion synchronisation fails.
+
+---
+
+## 18. SEO and Social Sharing
+
+Implement basic SEO.
+
+Include:
+
+- Page title.
+- Meta description.
+- Open Graph metadata.
+- Appropriate favicon.
+- Semantic page structure.
+- Descriptive book page titles where possible.
+
+Use the website name consistently:
+
+**Nurzam’s Library**
+
+Suggested description:
+
+"A personal library documenting books read, books to read, literary interests, and an ongoing reading journey."
+
+Do not create misleading metadata or structured data.
+
+---
+
+## 19. README Documentation
+
+Create a complete README explaining:
+
+1. Project overview.
+2. Architecture.
+3. Technology stack.
+4. Folder structure.
+5. How to create a Notion integration.
+6. How to connect the integration to the database.
+7. How to identify the Notion database ID.
+8. How to configure GitHub Secrets.
+9. How to configure GitHub Pages.
+10. How the 30-minute synchronisation works.
+11. How to run the sync script manually.
+12. How to troubleshoot synchronisation failures.
+13. How to modify Notion property mappings.
+14. How to extend the recommendation engine.
+15. How to add new website sections.
+
+The documentation must be written for someone who understands basic web development but does not necessarily know the Notion API or GitHub Actions.
+
+---
+
+## 20. Development and Implementation Instructions
+
+Build the project in a structured manner.
+
+### Phase 1: Project foundation
+
+- Establish the file structure.
+- Set up HTML, CSS, and JavaScript.
+- Establish the design tokens.
+- Build the main layout.
+- Implement responsive navigation.
+- Create reusable UI components.
+
+### Phase 2: Visual implementation
+
+Build the Playful Neo-Brutalist interface.
+
+Start with:
+
+- Header.
+- Navigation.
+- Hero section.
+- Statistics.
+- Book cards.
+- Currently Reading.
+- Featured books.
+- Footer.
+
+The visual implementation must closely follow the design direction described in this prompt.
+
+### Phase 3: Data model
+
+- Establish the internal book data model.
+- Create sample JSON data for development.
+- Build the data-loading module.
+- Implement data normalisation.
+- Implement missing-value handling.
+
+Sample data must be clearly identified as mock data and must not be mistaken for real Notion records.
+
+### Phase 4: Core functionality
+
+Implement:
+
+- Home.
+- To Read.
+- Read.
+- Wishlist.
+- Genre.
+- Author.
+- History.
+- Search.
+- Book detail views.
+- Sorting and filtering.
+- Statistics.
+- Reading recommendations.
+
+### Phase 5: Notion integration
+
+- Inspect the actual Notion schema.
+- Create property mappings.
+- Implement Notion API retrieval.
+- Handle pagination.
+- Generate public JSON.
+- Implement data validation and sanitisation.
+- Test synchronisation.
+
+### Phase 6: Automation
+
+- Configure GitHub Actions.
+- Implement the 30-minute schedule.
+- Implement manual execution.
+- Configure GitHub Secrets.
+- Configure GitHub Pages deployment.
+
+### Phase 7: Testing and refinement
+
+Test:
+
+- Desktop layout.
+- Tablet layout.
+- Mobile layout.
+- Navigation.
+- Search.
+- Filters.
+- Sorting.
+- Book details.
+- Statistics.
+- Recommendations.
+- Missing cover images.
+- Missing properties.
+- Empty states.
+- Notion API failures.
+- JSON loading failures.
+- GitHub Pages deployment paths.
+- Public data sanitisation.
+
+---
+
+## 21. Functional Acceptance Criteria
+
+The project is only considered complete when all the following conditions are met.
+
+### Data and synchronisation
+
+- [ ] Notion is the only book-management interface.
+- [ ] The website retrieves data from the actual Notion database.
+- [ ] Synchronisation runs every 30 minutes.
+- [ ] Manual synchronisation is available through GitHub Actions.
+- [ ] Notion pagination is handled.
+- [ ] API credentials remain private.
+- [ ] Public JSON contains only approved public data.
+- [ ] Failed synchronisation does not destroy previously published data.
+- [ ] Unchanged data does not create unnecessary commits.
+
+### Website functionality
+
+- [ ] Home / Library works.
+- [ ] To Read works.
+- [ ] Read works.
+- [ ] Wishlist works.
+- [ ] Genre directory works.
+- [ ] Author directory works.
+- [ ] History works.
+- [ ] Search works.
+- [ ] Book detail views work.
+- [ ] Filters and sorting work.
+- [ ] Statistics are calculated dynamically.
+- [ ] Reading recommendations are generated automatically.
+- [ ] Missing data is handled gracefully.
+
+### Design and experience
+
+- [ ] Playful Neo-Brutalist design is consistently implemented.
+- [ ] The visual identity uses the specified colour palette.
+- [ ] Typography has a clear hierarchy.
+- [ ] Book covers are prominent.
+- [ ] The layout is responsive.
+- [ ] Navigation is intuitive.
+- [ ] Interactions are accessible.
+- [ ] The design does not become excessively cluttered.
+
+### Deployment
+
+- [ ] The website works on GitHub Pages.
+- [ ] All assets load correctly.
+- [ ] Relative paths work.
+- [ ] The public JSON is accessible.
+- [ ] No private credentials are exposed.
+
+---
+
+## 22. Important Development Constraints
+
+Follow these constraints throughout implementation:
+
+1. Do not replace the requested Neo-Brutalist design with a generic minimalist design.
+2. Do not introduce React, Vue, or another frontend framework.
+3. Do not introduce a continuously running backend server.
+4. Do not expose Notion credentials.
+5. Do not make me manage books through a separate admin dashboard.
+6. Do not hardcode statistics or book records.
+7. Do not invent book metadata.
+8. Do not require manual sorting of the reading queue.
+9. Do not make paid AI services mandatory.
+10. Do not overcomplicate the architecture.
+11. Do not build features that are unrelated to a personal book library.
+12. Do not sacrifice accessibility or responsiveness for visual effects.
+13. Do not assume that every Notion property exists.
+14. Do not silently ignore unsupported Notion properties.
+15. Keep the implementation modular and easy to maintain.
+
+---
+
+## 23. Expected Deliverables
+
+Produce a complete, working project containing:
+
+1. Fully implemented HTML frontend.
+2. Complete Neo-Brutalist CSS design system.
+3. Functional JavaScript modules.
+4. Sample library JSON.
+5. Notion synchronisation script.
+6. Notion property-mapping configuration.
+7. Data validation and sanitisation.
+8. GitHub Actions synchronisation workflow.
+9. GitHub Pages deployment workflow.
+10. Complete README documentation.
+11. Instructions for setting up Notion integration.
+12. Instructions for configuring GitHub Secrets.
+13. Instructions for deploying the website.
+
+The result must be a functional website, not merely a visual mockup or static design prototype.
+
+---
+
+## 24. Final Instruction
+
+Before writing the implementation, inspect the project environment and determine whether an existing repository or codebase should be preserved.
+
+If the actual Notion database schema is not available, do not invent its property names. Build the configurable mapping layer and clearly identify the information needed to complete the integration.
+
+Prioritise a working end-to-end implementation over unnecessary complexity.
+
+The final product should feel like a distinctive, playful, well-designed independent digital library: visually bold, easy to explore, rich in book information, and automatically maintained through Notion.
+
+**Project name: Nurzam’s Library.**
+
+**Design direction: Playful Neo-Brutalism.**
+
+**Frontend: HTML5 + CSS3 + Vanilla JavaScript.**
+
+**Content management: Notion.**
+
+**Synchronisation: GitHub Actions, every 30 minutes.**
+
+**Hosting: GitHub Pages.**

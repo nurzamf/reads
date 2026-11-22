@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#171B35"/>
+  <rect x="0" y="0" width="20" height="450" fill="#F36B55"/>
+  <circle cx="160" cy="224" r="96" fill="#3155E7" stroke="#FFF9EB" stroke-width="3"/>
+  <path d="M96 224H224M160 160V288" stroke="#FFD84D" stroke-width="6" stroke-linecap="round"/>
+  <text x="160" y="76" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="18" fill="#FFF9EB">THE CREATIVE</text>
+  <text x="160" y="102" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="24" fill="#FFD84D">ACT</text>
+  <text x="160" y="388" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="13" fill="#FFF9EB" letter-spacing="1.5">RICK RUBIN</text>
+</svg>

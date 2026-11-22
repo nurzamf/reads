@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#171B35"/>
+  <rect x="0" y="0" width="20" height="450" fill="#FFD84D"/>
+  <rect x="44" y="42" width="222" height="108" rx="12" fill="#3155E7" stroke="#FFF9EB" stroke-width="2.5"/>
+  <text x="155" y="88" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="18" fill="#FFFFFF">A SWIM IN A POND</text>
+  <text x="155" y="118" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="18" fill="#FFD84D">IN THE RAIN</text>
+  <ellipse cx="155" cy="260" rx="88" ry="52" fill="#DCE5FF" stroke="#FFF9EB" stroke-width="2.5"/>
+  <ellipse cx="155" cy="260" rx="52" ry="28" fill="#3155E7" stroke="#171B35" stroke-width="2.5"/>
+  <ellipse cx="155" cy="260" rx="20" ry="11" fill="#F36B55" stroke="#171B35" stroke-width="2"/>
+  <text x="155" y="392" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="14" fill="#FFF9EB" letter-spacing="1.4">GEORGE SAUNDERS</text>
+</svg>

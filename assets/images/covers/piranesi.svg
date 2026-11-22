@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#171B35"/>
+  <rect x="0" y="0" width="20" height="450" fill="#3155E7"/>
+  <rect x="38" y="34" width="234" height="382" rx="12" fill="#FFF9EB" stroke="#FFD84D" stroke-width="3"/>
+  <path d="M72 340V195C72 146 111 108 155 108C199 108 238 146 238 195V340" fill="#DCE5FF" stroke="#171B35" stroke-width="3"/>
+  <path d="M104 340V212C104 183 127 160 155 160C183 160 206 183 206 212V340" fill="#3155E7" stroke="#171B35" stroke-width="3"/>
+  <circle cx="155" cy="212" r="24" fill="#FFD84D" stroke="#171B35" stroke-width="3"/>
+  <path d="M72 325C108 308 134 338 155 325C176 312 204 338 238 325V355H72V325Z" fill="#F36B55" stroke="#171B35" stroke-width="2.5"/>
+  <text x="155" y="76" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="28" fill="#171B35" letter-spacing="2">PIRANESI</text>
+  <text x="155" y="392" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="13" fill="#171B35" letter-spacing="1.5">SUSANNA CLARKE</text>
+</svg>

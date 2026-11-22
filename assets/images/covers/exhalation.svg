@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#F36B55"/>
+  <rect x="0" y="0" width="20" height="450" fill="#171B35"/>
+  <rect x="42" y="42" width="224" height="366" rx="14" fill="#FFF9EB" stroke="#171B35" stroke-width="3"/>
+  <path d="M84 220L154 150L224 220L154 290Z" fill="#FFD84D" stroke="#171B35" stroke-width="3"/>
+  <circle cx="154" cy="220" r="28" fill="#3155E7" stroke="#171B35" stroke-width="3"/>
+  <text x="154" y="96" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#171B35">EXHALATION</text>
+  <text x="154" y="366" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="14" fill="#171B35" letter-spacing="1.5">TED CHIANG</text>
+</svg>

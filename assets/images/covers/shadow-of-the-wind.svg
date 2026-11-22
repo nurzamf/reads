@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#3155E7"/>
+  <rect x="0" y="0" width="20" height="450" fill="#F36B55"/>
+  <line x1="20" y1="0" x2="20" y2="450" stroke="#171B35" stroke-width="3"/>
+  <rect x="44" y="42" width="222" height="366" rx="16" fill="#FFFFFF" stroke="#171B35" stroke-width="3"/>
+  <rect x="74" y="148" width="68" height="118" rx="8" fill="#FFD84D" stroke="#171B35" stroke-width="3"/>
+  <rect x="158" y="168" width="76" height="98" rx="8" fill="#DCE5FF" stroke="#171B35" stroke-width="3"/>
+  <path d="M98 110H210" stroke="#171B35" stroke-width="4" stroke-linecap="round"/>
+  <text x="155" y="88" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="18" fill="#171B35">THE SHADOW</text>
+  <text x="155" y="316" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="18" fill="#3155E7">OF THE WIND</text>
+  <text x="155" y="376" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="12" fill="#171B35" letter-spacing="1">CARLOS RUIZ ZAFÓN</text>
+</svg>

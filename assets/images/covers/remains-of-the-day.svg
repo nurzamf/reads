@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#F36B55"/>
+  <rect x="0" y="0" width="20" height="450" fill="#171B35"/>
+  <rect x="44" y="42" width="222" height="366" rx="14" fill="#DCE5FF" stroke="#171B35" stroke-width="3"/>
+  <rect x="74" y="152" width="162" height="146" rx="12" fill="#171B35"/>
+  <circle cx="155" cy="225" r="46" fill="#FFD84D" stroke="#FFF9EB" stroke-width="3"/>
+  <text x="155" y="88" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#171B35">THE REMAINS</text>
+  <text x="155" y="114" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#3155E7">OF THE DAY</text>
+  <text x="155" y="366" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="13" fill="#171B35" letter-spacing="1.4">KAZUO ISHIGURO</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#171B35"/>
+  <rect x="0" y="0" width="20" height="450" fill="#3155E7"/>
+  <rect x="46" y="42" width="218" height="366" rx="14" fill="#FFD84D" stroke="#FFF9EB" stroke-width="3"/>
+  <rect x="78" y="148" width="154" height="154" rx="14" fill="#FFFFFF" stroke="#171B35" stroke-width="3"/>
+  <path d="M104 244L142 192L172 232L204 188" fill="none" stroke="#3155E7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="155" y="92" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="20" fill="#171B35">WAYS OF SEEING</text>
+  <text x="155" y="366" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="14" fill="#171B35" letter-spacing="1.4">JOHN BERGER</text>
+</svg>

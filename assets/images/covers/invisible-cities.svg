@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 450" width="300" height="450">
+  <rect width="300" height="450" fill="#DCE5FF"/>
+  <rect x="0" y="0" width="20" height="450" fill="#3155E7"/>
+  <line x1="20" y1="0" x2="20" y2="450" stroke="#171B35" stroke-width="3"/>
+  <rect x="48" y="138" width="214" height="196" rx="14" fill="#171B35"/>
+  <rect x="42" y="132" width="214" height="196" rx="14" fill="#FFFFFF" stroke="#171B35" stroke-width="3"/>
+  <rect x="66" y="160" width="60" height="140" rx="6" fill="#FFD84D" stroke="#171B35" stroke-width="2.5"/>
+  <rect x="136" y="160" width="96" height="64" rx="6" fill="#F36B55" stroke="#171B35" stroke-width="2.5"/>
+  <rect x="136" y="236" width="96" height="64" rx="6" fill="#3155E7" stroke="#171B35" stroke-width="2.5"/>
+  <text x="154" y="72" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#171B35">INVISIBLE</text>
+  <text x="154" y="102" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="22" fill="#3155E7">CITIES</text>
+  <text x="154" y="392" text-anchor="middle" font-family="sans-serif" font-weight="700" font-size="14" fill="#171B35" letter-spacing="1.4">ITALO CALVINO</text>
+</svg>
