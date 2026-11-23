@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { validateAndSanitiseBooks } from './data-validator.js';
 import { loadMappingConfig } from './notion-mapper.js';
 import {
+  cleanSynopsisText,
   normalizeMultilineText,
   normalizeWhitespace,
   readJsonSafe,
@@ -261,44 +262,9 @@ async function httpGetWithRetry(url, extraHeaders = {}, { timeoutMs = 12000, ret
   throw lastError || new Error(`Request failed: ${url}`);
 }
 
-function decodeHtmlEntities(str) {
-  if (!str || typeof str !== 'string') return '';
-  return str
-    .replace(/\\u003c/gi, '<')
-    .replace(/\\u003e/gi, '>')
-    .replace(/\\u0026/gi, '&')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0*39;|&apos;/gi, "'")
-    .replace(/&rsquo;/gi, '’')
-    .replace(/&lsquo;/gi, '‘')
-    .replace(/&rdquo;/gi, '”')
-    .replace(/&ldquo;/gi, '“')
-    .replace(/&mdash;/gi, '—')
-    .replace(/&ndash;/gi, '–')
-    .replace(/&hellip;/gi, '…')
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
-      const n = Number.parseInt(hex, 16);
-      return Number.isFinite(n) ? (n === 160 ? ' ' : String.fromCodePoint(n)) : '';
-    })
-    .replace(/&#(\d+);/g, (_, code) => {
-      const n = Number.parseInt(code, 10);
-      return Number.isFinite(n) ? (n === 160 ? ' ' : String.fromCodePoint(n)) : '';
-    });
-}
-
 function htmlToCleanMultilineText(rawHtml) {
   if (!rawHtml || typeof rawHtml !== 'string') return null;
-  const withBreaks = decodeHtmlEntities(rawHtml)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li|blockquote|h[1-6])>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\*\*([^*]+)\*\*/g, '$1');
-  const cleaned = normalizeMultilineText(withBreaks);
-  return cleaned || null;
+  return cleanSynopsisText(rawHtml) || null;
 }
 
 function normalizeMatchText(str) {

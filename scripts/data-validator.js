@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadMappingConfig } from './notion-mapper.js';
-import { normalizeMultilineText, normalizeWhitespace, readJsonSafe, slugify } from './utils.js';
+import { cleanSynopsisText, normalizeMultilineText, normalizeWhitespace, readJsonSafe, slugify } from './utils.js';
 
 function isSafeHttpOrLocalUrl(url) {
   if (!url || typeof url !== 'string') return false;
@@ -96,7 +96,7 @@ export function validateAndSanitiseBooks(rawBooks, config = loadMappingConfig())
       title,
       author,
       cover_url: isSafeHttpOrLocalUrl(raw.cover_url) ? raw.cover_url.trim() : null,
-      description: normalizeMultilineText(String(raw.description || '')) || null,
+      description: cleanSynopsisText(String(raw.description || '')) || null,
       language: normalizeWhitespace(String(raw.language || '')) || null,
       original_language: normalizeWhitespace(String(raw.original_language || '')) || null,
       publication_year: cleanNumber(raw.publication_year, { min: 1, max: 2100, integer: true }),
