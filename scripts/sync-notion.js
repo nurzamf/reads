@@ -102,6 +102,19 @@ async function extractBlocksText(blocks, token, notionVersion, privatePatterns =
       if (headingText) {
         sections.push({ kind: 'para', text: headingText });
       }
+      if (block.has_children && depth < 5) {
+        const children = await fetchBlockChildren(block.id, token, notionVersion);
+        const childText = await extractBlocksText(
+          children,
+          token,
+          notionVersion,
+          privatePatterns,
+          depth + 1
+        );
+        if (childText) {
+          sections.push({ kind: 'para', text: childText });
+        }
+      }
       continue;
     }
 
@@ -140,6 +153,14 @@ async function extractBlocksText(blocks, token, notionVersion, privatePatterns =
       case 'code':
         lineText = richTextToPlain(payload?.rich_text).trim();
         break;
+      case 'table_row':
+        if (Array.isArray(payload?.cells)) {
+          lineText = payload.cells
+            .map((cell) => richTextToPlain(cell).trim())
+            .filter(Boolean)
+            .join(' · ');
+        }
+        break;
       default:
         break;
     }
@@ -148,14 +169,16 @@ async function extractBlocksText(blocks, token, notionVersion, privatePatterns =
       sections.push({ kind, text: lineText });
     }
 
+    const syncedSourceId = type === 'synced_block' ? payload?.synced_from?.block_id : null;
+    const childContainerId = block.has_children ? block.id : syncedSourceId;
     const canRecurse =
-      block.has_children &&
-      depth < 3 &&
+      Boolean(childContainerId) &&
+      depth < 5 &&
       type !== 'child_page' &&
       type !== 'child_database';
 
     if (canRecurse) {
-      const children = await fetchBlockChildren(block.id, token, notionVersion);
+      const children = await fetchBlockChildren(childContainerId, token, notionVersion);
       const childText = await extractBlocksText(
         children,
         token,

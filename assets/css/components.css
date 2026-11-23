@@ -3,7 +3,7 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: var(--color-cream);
+  background: var(--color-white);
   border-bottom: var(--border-width) solid var(--color-navy);
 }
 
@@ -358,6 +358,7 @@
   font-weight: 800;
   font-size: 0.95rem;
   line-height: 1.25;
+  overflow-wrap: break-word;
 }
 
 .home-shelf-title a {
@@ -937,6 +938,7 @@
   font-weight: 800;
   font-size: 1.08rem;
   line-height: 1.22;
+  overflow-wrap: break-word;
 }
 
 .book-card-title a {
@@ -1294,6 +1296,7 @@
   font-size: 0.95rem;
   line-height: 1.2;
   color: var(--color-navy);
+  overflow-wrap: break-word;
 }
 
 .author-directory-count {
@@ -1543,14 +1546,15 @@
 
 .detail-description {
   margin: 0;
-  max-width: 66ch;
+  width: 100%;
 }
 
 .detail-prose {
+  width: 100%;
   font-size: 0.9rem;
   line-height: 1.64;
   color: var(--color-navy);
-  max-width: 66ch;
+  overflow-wrap: break-word;
 }
 
 .detail-prose p + p,

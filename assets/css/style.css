@@ -51,7 +51,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-cream);
+  background-color: var(--color-white);
   color: var(--color-navy);
   font-family: var(--font-body);
   font-size: 1rem;

@@ -2,8 +2,6 @@ import {
   calculateProgress,
   escapeHtml,
   formatDate,
-  normalizeAuthorKey,
-  normalizeGenreKey,
   renderCoverMarkup,
   renderRating,
   renderStatusBadge,
@@ -38,36 +36,6 @@ function renderParagraphs(text) {
       return `<p>${lines.map((l) => escapeHtml(l)).join('<br />')}</p>`;
     })
     .join('');
-}
-
-function getRelatedBooks(currentBook, allBooks, limit = 4) {
-  const currentGenres = new Set((currentBook.genres || []).map(normalizeGenreKey));
-  const currentAuthorKey = normalizeAuthorKey(currentBook.author);
-
-  const scored = allBooks
-    .filter((candidate) => candidate.id !== currentBook.id && candidate.slug !== currentBook.slug)
-    .map((candidate) => {
-      let score = 0;
-      if (normalizeAuthorKey(candidate.author) === currentAuthorKey) {
-        score += 4;
-      }
-      for (const g of candidate.genres || []) {
-        if (currentGenres.has(normalizeGenreKey(g))) {
-          score += 3;
-        }
-      }
-      if (candidate.language && candidate.language === currentBook.language) {
-        score += 0.5;
-      }
-      if (candidate.favourite) {
-        score += 0.5;
-      }
-      return { book: candidate, score };
-    })
-    .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || (b.book.rating || 0) - (a.book.rating || 0));
-
-  return scored.slice(0, limit).map((entry) => entry.book);
 }
 
 export function renderBookCard(book, { showStatus = true, showDateFinished = false } = {}) {
@@ -154,8 +122,6 @@ export function renderBookDetailView(library, slug) {
     { label: 'Date Started', value: startedText },
     { label: 'Date Finished', value: finishedText },
   ].filter((item) => item.value !== null && item.value !== undefined && item.value !== '');
-
-  const related = getRelatedBooks(book, library.books, 4);
 
   const html = `
     <div class="container">
@@ -287,24 +253,6 @@ export function renderBookDetailView(library, slug) {
           }
         </div>
       </article>
-
-      ${
-        related.length > 0
-          ? `
-        <section class="section-block" aria-labelledby="related-books-heading">
-          <div class="section-header">
-            <div>
-              <h2 id="related-books-heading" class="section-title">Related Books in the Library</h2>
-              <p class="section-subtitle">Books sharing genres or the same author.</p>
-            </div>
-          </div>
-          <div class="books-grid">
-            ${related.map((item) => renderBookCard(item)).join('')}
-          </div>
-        </section>
-      `
-          : ''
-      }
     </div>
   `;
 

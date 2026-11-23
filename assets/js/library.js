@@ -739,7 +739,7 @@ export function renderGenresView(library, selectedSlug) {
 
         ${
           genres.length === 0
-            ? `<div class="nightstand-empty">No genres yet. Add a Genre property in Notion and this page fills itself in.</div>`
+            ? `<div class="nightstand-empty">No genres yet. Genres will appear here once books are tagged in the catalogue.</div>`
             : `
           <div class="author-directory-grid">
             ${genres
@@ -999,7 +999,7 @@ export function renderHistoryView(library, state) {
 
       ${
         completedWithoutDate.length > 0
-          ? `<p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--color-muted);">Note: ${escapeHtml(completedWithoutDate.length)} completed ${completedWithoutDate.length === 1 ? 'book has' : 'books have'} no completion date in Notion and ${completedWithoutDate.length === 1 ? 'is' : 'are'} excluded from year-specific totals.</p>`
+          ? `<p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--color-muted);">Note: ${escapeHtml(completedWithoutDate.length)} completed ${completedWithoutDate.length === 1 ? 'book has' : 'books have'} no completion date recorded and ${completedWithoutDate.length === 1 ? 'is' : 'are'} excluded from year-specific totals.</p>`
           : ''
       }
     </div>

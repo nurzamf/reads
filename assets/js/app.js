@@ -40,24 +40,29 @@ const appState = {
 
 let currentLibrary = null;
 
+function formatLastUpdated(isoString) {
+  if (typeof isoString !== 'string' || !isoString.trim()) return null;
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return /^\d{4}-\d{2}-\d{2}/.test(isoString) ? isoString.slice(0, 10) : null;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  return `${yyyy}-${mm}-${dd} · ${hh}:${min}`;
+}
+
 function updateFooterMeta(library) {
   const el = document.getElementById('footer-sync-meta');
   if (!el || !library) return;
 
-  const isoDate =
-    typeof library.last_updated === 'string' && /^\d{4}-\d{2}-\d{2}/.test(library.last_updated)
-      ? library.last_updated.slice(0, 10)
-      : null;
-
-  if (library.is_sample_data) {
-    el.textContent = isoDate
-      ? `Nurzam’s Library · Sample snapshot · Last updated ${isoDate}`
-      : 'Nurzam’s Library · Sample snapshot';
-  } else if (isoDate) {
-    el.textContent = `Nurzam’s Library · Notion snapshot · Last updated ${isoDate}`;
-  } else {
-    el.textContent = 'Nurzam’s Library · Notion snapshot';
-  }
+  const formattedDateTime = formatLastUpdated(library.last_updated);
+  el.textContent = formattedDateTime
+    ? `Nurzam’s Library · Last updated ${formattedDateTime}`
+    : 'Nurzam’s Library';
 }
 
 function renderErrorView(container, error, onRetry) {
@@ -76,6 +81,57 @@ function renderErrorView(container, error, onRetry) {
     </div>
   `;
   container.querySelector('#retry-load-btn')?.addEventListener('click', onRetry);
+}
+
+const DEFAULT_SEO_TITLE = 'Nurzam’s Library — Personal Book Catalogue & Journal';
+const DEFAULT_SEO_DESCRIPTION =
+  'Explore Nurzam’s Library: a personal library documenting books read, books to read, literary interests, reviews, and an ongoing reading journey.';
+
+function setMetaContent(selector, value) {
+  const el = document.querySelector(selector);
+  if (el && value) {
+    el.setAttribute('content', value);
+  }
+}
+
+function updateSocialMeta(route, viewTitle) {
+  const baseUrl = window.location.origin + window.location.pathname;
+  const fullUrl = window.location.hash ? `${baseUrl}${window.location.hash}` : baseUrl;
+  const defaultImage = new URL('./assets/images/og-preview.jpg', baseUrl).href;
+
+  const canonical = document.getElementById('canonical-link');
+  if (canonical) canonical.setAttribute('href', baseUrl);
+  setMetaContent('meta[property="og:url"]', fullUrl);
+
+  let title = viewTitle ? `${viewTitle} — Nurzam’s Library` : DEFAULT_SEO_TITLE;
+  let description = DEFAULT_SEO_DESCRIPTION;
+  let image = defaultImage;
+
+  if (route.section === 'book' && currentLibrary) {
+    const book = currentLibrary.books.find(
+      (b) => b.slug === route.param || b.id === route.param
+    );
+    if (book) {
+      title = `${book.title} by ${book.author} — Nurzam’s Library`;
+      if (book.description) {
+        description =
+          book.description.length > 155
+            ? `${book.description.slice(0, 152).trim()}…`
+            : book.description;
+      }
+      if (book.cover_url && /^https?:\/\//i.test(book.cover_url)) {
+        image = book.cover_url;
+      }
+    }
+  }
+
+  setMetaContent('meta[name="description"]', description);
+  setMetaContent('meta[property="og:title"]', title);
+  setMetaContent('meta[property="og:description"]', description);
+  setMetaContent('meta[property="og:image"]', image);
+  setMetaContent('meta[name="twitter:title"]', title);
+  setMetaContent('meta[name="twitter:description"]', description);
+  setMetaContent('meta[name="twitter:image"]', image);
 }
 
 function renderRoute(options = {}) {
@@ -118,6 +174,7 @@ function renderRoute(options = {}) {
   }
 
   setPageTitle(view.title);
+  updateSocialMeta(route, view.title);
   main.innerHTML = view.html;
   bindCoverFallbacks(main);
 

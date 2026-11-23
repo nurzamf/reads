@@ -4,10 +4,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateAndSanitiseBooks } from './data-validator.js';
 import { loadMappingConfig } from './notion-mapper.js';
-import { normalizeMultilineText, normalizeWhitespace, readJsonSafe, sleep, writeJsonAtomic } from './utils.js';
+import {
+  normalizeMultilineText,
+  normalizeWhitespace,
+  readJsonSafe,
+  sleep,
+  writeJsonAtomic,
+} from './utils.js';
 
 const USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 const OPENLIBRARY_LANGUAGE_MAP = {
   eng: 'English',
@@ -42,144 +48,88 @@ const OPENLIBRARY_LANGUAGE_MAP = {
   ar: 'Arabic',
 };
 
-const NOISY_SUBJECT_PATTERNS = [
-  /nyt:/i,
-  /new york times/i,
-  /accessible book/i,
-  /protected daisy/i,
-  /in library/i,
-  /internet archive/i,
-  /open library/i,
-  /reading level/i,
-  /large type/i,
+const SKIP_PUBLISHER_PATTERNS = [
   /large print/i,
-  /overdrive/i,
-  /staff picks/i,
-  /award/i,
-  /bestseller/i,
-  /best seller/i,
-  /collectionid/i,
-  /general$/i,
-  /^juvenile/i,
-  /translations into/i,
-  /specimens/i,
-  /^audiobooks?$/i,
-  /^ficcion$/i,
-  /^historia$/i,
-  /^ancianos$/i,
-  /guerra mundial/i,
-  /,\s*fiction$/i,
-  /^adult$/i,
-  /^general fiction$/i,
-  /^imaginary places$/i,
-  /^curiosities and wonders$/i,
-  /^dwellings$/i,
-  /^duchies$/i,
-  /^receptionists$/i,
-  /^retail stores$/i,
-  /^atheists$/i,
-  /^counseling$/i,
-  /^multiple timelines$/i,
-  /^books about books$/i,
-  /^older men$/i,
-  /^young women$/i,
-  /^teenage (boys|girls)$/i,
-  /^interpersonal relations$/i,
-  /^man-woman relationships/i,
-  /^life change events$/i,
-  /^human rights/i,
-  /^civil rights/i,
-  /^politics and government$/i,
-  /^great britain$/i,
-  /^idaho$/i,
-  /^italy$/i,
-  /^korea$/i,
-  /^poland$/i,
-  /^japan$/i,
-  /^asia$/i,
-  /^dead$/i,
-  /^space$/i,
-  /^space and time$/i,
-  /^space colonies$/i,
-  /^language and languages$/i,
-  /^underground movements$/i,
-  /^collaborationists$/i,
-  /^civilians in war$/i,
-  /^women in war$/i,
-  /^women authors$/i,
-  /^women rock musicians$/i,
-  /^musicians$/i,
-  /^mothers of murder victims$/i,
-  /^sexual minorities$/i,
-  /^arab-israeli conflict$/i,
-  /^palestinian/i,
-  /^dunkirk evacuation$/i,
-  /^marie curie$/i,
-  /^ali hazelwood$/i,
-  /^love hypothesis$/i,
-  /^love on the brain$/i,
-  /^dune$/i,
-  /^atonement$/i,
-  /^reality$/i,
-  /^technological$/i,
-  /^fear$/i,
-  /^lust$/i,
-  /^race$/i,
-  /^father(s)?$/i,
-  /^brotherhood$/i,
-  /^community life$/i,
-  /^family life$/i,
-  /^families$/i,
-  /^brothers and sisters$/i,
-  /^mothers and daughters$/i,
-  /^fathers and daughters$/i,
-  /^cold cases$/i,
-  /^police$/i,
-  /^investigation$/i,
-  /^murderers$/i,
-  /^assassins$/i,
-  /^kidnapping$/i,
-  /^epidemics$/i,
-  /^translators$/i,
-  /^chinese$/i,
-  /^imperialism$/i,
-  /^summer$/i,
-  /^gods$/i,
-  /^goddesses$/i,
-  /^dragons$/i,
-  /^courts and courtiers$/i,
-  /^labyrinths$/i,
-  /^magic$/i,
-  /^epic$/i,
+  /center point/i,
+  /cengage/i,
+  /thorndike/i,
+  /taylor\s*&?\s*francis/i,
+  /planeta/i,
+  /salamandra/i,
+  /einaudi/i,
+  /heyne/i,
+  /umbriel/i,
+  /actes sud/i,
+  /bonniers/i,
+  /nan hai/i,
+  /nuevos tiempos/i,
+  /oceano de mexico/i,
+  /shinch[oō]sha/i,
+  /gent[oō]sha/i,
+  /mondadori/i,
+  /sukkubus/i,
+  /swiat ksiazki/i,
+  /yayinlari/i,
+  /harper audio/i,
+  /bound to stay bound/i,
+  /ara mini/i,
+  /ara llibres/i,
+  /debolsillo/i,
+  /ediciones/i,
+  /edicions/i,
+  /suma de letras/i,
+  /boekerij/i,
+  /arqueiro/i,
+  /gallimard/i,
+  /livre de poche/i,
 ];
 
-const GENRE_SYNONYM_MAP = {
+// Clean, canonical Goodreads-style literary genre taxonomy
+const GENRE_MAP = {
+  // Core Fiction & Literary
   'fiction': 'Fiction',
+  'fiction & literature': 'Fiction',
   'literary': 'Literary Fiction',
   'literary fiction': 'Literary Fiction',
-  'contemporary': 'Contemporary Fiction',
-  'contemporary fiction': 'Contemporary Fiction',
-  'contemporary women': 'Contemporary Fiction',
-  'womens fiction': 'Contemporary Fiction',
-  "women's fiction": 'Contemporary Fiction',
-  'women': 'Contemporary Fiction',
-  'mystery': 'Mystery',
-  'mystery thriller': 'Mystery',
-  'thriller': 'Thriller',
-  'suspense': 'Thriller',
-  'psychological': 'Psychological Fiction',
-  'psychological fiction': 'Psychological Fiction',
-  'psychological thriller': 'Thriller',
-  'crime': 'Crime',
-  'murder': 'Crime',
-  'mystery & detective': 'Mystery',
-  'police procedural': 'Crime',
+  'contemporary': 'Contemporary',
+  'contemporary fiction': 'Contemporary',
+  'family fiction & literature': 'Family Saga',
+  'family': 'Family Saga',
+  'family saga': 'Family Saga',
+  'sagas': 'Family Saga',
+  'domestic fiction': 'Fiction',
+
+  // Historical
   'historical': 'Historical Fiction',
   'historical fiction': 'Historical Fiction',
-  'history': 'History',
+  'historical romance': 'Historical Fiction',
+  'world war, 1939-1945': 'Historical Fiction',
   'war & military': 'War Fiction',
-  'world war, 1939-1945': 'War Fiction',
+
+  // Mystery / Thriller / Crime
+  'mystery': 'Mystery',
+  'mysteries & thrillers': 'Mystery & Thriller',
+  'mystery thriller': 'Mystery & Thriller',
+  'mystery & detective': 'Mystery',
+  'women sleuths': 'Mystery',
+  'thriller': 'Thriller',
+  'thrillers': 'Thriller',
+  'suspense': 'Thriller',
+  'psychological thriller': 'Thriller',
+  'psychological': 'Psychological',
+  'psychological fiction': 'Psychological',
+  'crime': 'Crime',
+  'police procedural': 'Crime',
+
+  // Speculative
   'fantasy': 'Fantasy',
+  'epic fantasy': 'Fantasy',
+  'urban fantasy': 'Fantasy',
+  'historical fantasy': 'Fantasy',
+  'dark fantasy': 'Fantasy',
+  'military fantasy': 'Fantasy',
+  'sci-fi & fantasy': 'Fantasy',
+  'dark academia': 'Dark Academia',
   'science fiction': 'Science Fiction',
   'science-fiction': 'Science Fiction',
   'sci fi': 'Science Fiction',
@@ -187,65 +137,52 @@ const GENRE_SYNONYM_MAP = {
   'dystopia': 'Dystopian',
   'dystopian': 'Dystopian',
   'magical realism': 'Magical Realism',
+  'time travel': 'Time Travel',
+  'time-traveling': 'Time Travel',
+  'fairy tales, myths & fables': 'Fantasy',
+  'mythology': 'Mythology',
+  'retellings': 'Mythology',
+  'horror': 'Horror',
+  'gothic': 'Gothic',
+
+  // Romance
   'romance': 'Romance',
-  'romance literature': 'Romance',
   'contemporary romance': 'Romance',
-  'historical romance': 'Historical Romance',
-  'enemies to lovers': 'Romance',
-  'love': 'Romance',
+  'new adult romance': 'Romance',
+  'romantic comedies': 'Romance',
+  'paranormal romance': 'Romance',
+
+  // Age, Identity, Format, Regional Literature
   'young adult': 'Young Adult',
   'young adult fiction': 'Young Adult',
   'teen & young adult': 'Young Adult',
   'coming of age': 'Coming of Age',
-  'horror': 'Horror',
-  'gothic': 'Gothic',
-  'classics': 'Classics',
-  'classic': 'Classics',
-  'japanese literature': 'Japanese Literature',
-  'japanese fiction': 'Japanese Literature',
-  'japanese short stories': 'Japanese Literature',
-  'literatura japonesa': 'Japanese Literature',
-  'asian literature': 'Asian Literature',
-  'american literature': 'American Literature',
-  'english literature': 'English Literature',
-  'european fiction': 'European Fiction',
-  'short stories': 'Short Stories',
-  'nonfiction': 'Nonfiction',
-  'non-fiction': 'Nonfiction',
-  'memoir': 'Memoir',
-  'biography': 'Biography',
-  'autobiography': 'Memoir',
-  'essays': 'Essays',
-  'poetry': 'Poetry',
-  'mythology': 'Mythology',
-  'retellings': 'Mythology',
   'lgbt': 'LGBTQ+',
   'lgbtq': 'LGBTQ+',
   'lgbtq+': 'LGBTQ+',
   'lgbtq novels': 'LGBTQ+',
+  'queer': 'LGBTQ+',
   'gay': 'LGBTQ+',
   'lesbians': 'LGBTQ+',
-  'queer': 'LGBTQ+',
-  'time travel': 'Time Travel',
-  'time-traveling': 'Time Travel',
+  'classics': 'Classics',
+  'classic': 'Classics',
+  'short stories': 'Short Stories',
   'epistolary': 'Epistolary',
-  'family': 'Family Saga',
-  'family life': 'Family Saga',
-  'family saga': 'Family Saga',
-  'sagas': 'Family Saga',
-  'dysfunctional families': 'Family Saga',
-  'domestic fiction': 'Domestic Fiction',
-  'marriage': 'Domestic Fiction',
-  'grief': 'Literary Fiction',
-  'friendship': 'Contemporary Fiction',
-  'survival': 'Adventure',
-  'adventure': 'Adventure',
-  'music': 'Music Fiction',
-  'pianists': 'Music Fiction',
-  'political': 'Political Fiction',
-  'comics & graphic novels, literary': 'Graphic Novel',
-  'graphic novels': 'Graphic Novel',
+  'japanese literature': 'Japanese Literature',
+  'japanese fiction': 'Japanese Literature',
+  'japanese short stories': 'Japanese Literature',
+
+  // Nonfiction (filtered out automatically if book has clear Fiction tags)
+  'nonfiction': 'Nonfiction',
+  'non-fiction': 'Nonfiction',
+  'memoir': 'Memoir',
+  'biography': 'Biography',
+  'history': 'History',
+  'essays': 'Essays',
+  'poetry': 'Poetry',
 };
+
+const NONFICTION_GENRES = new Set(['Nonfiction', 'History', 'Essays', 'Poetry']);
 
 function httpGetIpv4(url, extraHeaders = {}, { timeoutMs = 12000, redirectsLeft = 3 } = {}) {
   return new Promise((resolve, reject) => {
@@ -295,14 +232,21 @@ function httpGetIpv4(url, extraHeaders = {}, { timeoutMs = 12000, redirectsLeft 
   });
 }
 
-async function httpGetWithRetry(url, extraHeaders = {}, { timeoutMs = 12000, retries = 2 } = {}) {
+async function httpGetWithRetry(url, extraHeaders = {}, { timeoutMs = 12000, retries = 3 } = {}) {
   let lastError = null;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const res = await httpGetIpv4(url, extraHeaders, { timeoutMs });
-      if (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) {
+      if (
+        res.status === 403 ||
+        res.status === 429 ||
+        res.status === 502 ||
+        res.status === 503 ||
+        res.status === 504
+      ) {
         if (attempt < retries) {
-          await sleep(450 * (attempt + 1));
+          const delay = res.status === 403 || res.status === 429 ? 1800 * (attempt + 1) : 900 * (attempt + 1);
+          await sleep(delay);
           continue;
         }
       }
@@ -310,7 +254,7 @@ async function httpGetWithRetry(url, extraHeaders = {}, { timeoutMs = 12000, ret
     } catch (err) {
       lastError = err;
       if (attempt < retries) {
-        await sleep(450 * (attempt + 1));
+        await sleep(700 * (attempt + 1));
       }
     }
   }
@@ -336,9 +280,13 @@ function decodeHtmlEntities(str) {
     .replace(/&mdash;/gi, '—')
     .replace(/&ndash;/gi, '–')
     .replace(/&hellip;/gi, '…')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      const n = Number.parseInt(hex, 16);
+      return Number.isFinite(n) ? (n === 160 ? ' ' : String.fromCodePoint(n)) : '';
+    })
     .replace(/&#(\d+);/g, (_, code) => {
       const n = Number.parseInt(code, 10);
-      return Number.isFinite(n) ? String.fromCodePoint(n) : '';
+      return Number.isFinite(n) ? (n === 160 ? ' ' : String.fromCodePoint(n)) : '';
     });
 }
 
@@ -347,7 +295,8 @@ function htmlToCleanMultilineText(rawHtml) {
   const withBreaks = decodeHtmlEntities(rawHtml)
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li|blockquote|h[1-6])>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '');
+    .replace(/<[^>]+>/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1');
   const cleaned = normalizeMultilineText(withBreaks);
   return cleaned || null;
 }
@@ -361,6 +310,30 @@ function normalizeMatchText(str) {
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function stripTitleSubtitle(title) {
+  if (!title || typeof title !== 'string') return '';
+  return title
+    .replace(/\s*:\s*(?:A Novel|A GMA Book Club Pick|A Reese's Book Club Pick|Book \d+|A Memoir).*$/i, '')
+    .replace(/\s*\([^)]*(?:Edition|Series|Book|#\d+)[^)]*\)\s*$/i, '')
+    .trim();
+}
+
+function buildSearchTitleVariants(title) {
+  const base = stripTitleSubtitle(title);
+  const variants = [base];
+  const expanded = base
+    .replace(/\bLove Song\b/i, 'Love Songs')
+    .replace(/\bW\.E\.B\.?\s*Dubois\b/i, 'W. E. B. Du Bois')
+    .replace(/\bSt\.\s*/gi, 'St ')
+    .replace(/\./g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (expanded && expanded.toLowerCase() !== base.toLowerCase()) {
+    variants.push(expanded);
+  }
+  return variants;
 }
 
 function levenshtein(a, b) {
@@ -381,16 +354,21 @@ function levenshtein(a, b) {
 
 function isSameAuthorClose(notionAuthor, candidateAuthor) {
   const a = normalizeMatchText(notionAuthor);
-  const b = normalizeMatchText(candidateAuthor);
+  const bRaw = String(candidateAuthor || '').split(/&|,/)[0];
+  const b = normalizeMatchText(bRaw);
+  const bFull = normalizeMatchText(candidateAuthor);
+
   if (!a || a === 'unknown author') return true;
-  if (!b) return false;
-  if (a === b || a.includes(b) || b.includes(a)) return true;
+  if (!bFull) return false;
+  if (a === b || a === bFull || bFull.includes(a) || a.includes(b)) return true;
 
   const aTokens = a.split(' ');
   const bTokens = b.split(' ');
   const aLast = aTokens[aTokens.length - 1];
   const bLast = bTokens[bTokens.length - 1];
-  if (aLast === bLast) return true;
+  if (aLast === bLast && (aTokens[0]?.[0] === bTokens[0]?.[0] || aTokens.length === 1 || bTokens.length === 1)) {
+    return true;
+  }
   if (aLast.length >= 4 && bLast.length >= 4 && levenshtein(aLast, bLast) <= 2) {
     if (aTokens.length === 1 || bTokens.length === 1) return true;
     return aTokens[0] === bTokens[0] || levenshtein(aTokens[0], bTokens[0]) <= 1;
@@ -398,9 +376,28 @@ function isSameAuthorClose(notionAuthor, candidateAuthor) {
   return false;
 }
 
+function isTitleMatch(bookTitle, candidateTitle) {
+  const target = normalizeMatchText(stripTitleSubtitle(bookTitle));
+  const cand = normalizeMatchText(stripTitleSubtitle(candidateTitle));
+  const candBeforeColon = normalizeMatchText(String(candidateTitle || '').split(':')[0]);
+  if (!target || !cand) return false;
+  if (target === cand || target === candBeforeColon) return true;
+  if (target.length >= 10 && levenshtein(target, cand) <= 2) return true;
+  if (
+    target.length >= 4 &&
+    (cand.startsWith(`${target} `) || target.startsWith(`${cand} `))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function hasNonLatinScript(str) {
+  return Boolean(str && /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(str));
+}
+
 function isLatinReadableAuthor(name) {
-  if (!name || typeof name !== 'string') return false;
-  return /[a-zA-Z]{2,}/.test(name);
+  return Boolean(name && /[a-zA-Z]{2,}/.test(name));
 }
 
 export function extractGoodreadsBookId(goodreadsUrl) {
@@ -414,66 +411,73 @@ function upgradeGoodreadsCoverUrl(url) {
   return url.replace(/\._S[XY]\d+_(?:CR[\d,]+_)?/i, '');
 }
 
-function canonicalizeGenresList(rawGenres, book = null) {
-  if (!Array.isArray(rawGenres)) return [];
-  const normBookTitle = normalizeMatchText(book?.title || '');
-  const normBookAuthor = normalizeMatchText(book?.author || '');
-  const seen = new Set();
-  const specific = [];
-  const generic = [];
+function isTruncatedText(text) {
+  return typeof text === 'string' && /(\.\.\.|…)\s*$/.test(text.trim());
+}
 
-  const expandedRaw = [];
+function canonicalizeGenresList(rawGenres, { allowFallbackFiction = true } = {}) {
+  if (!Array.isArray(rawGenres)) return [];
+  const expanded = [];
+
   for (const raw of rawGenres) {
     const rawStr = normalizeWhitespace(String(raw || ''));
+    if (!rawStr) continue;
     if (rawStr.includes('/')) {
       for (const part of rawStr.split('/')) {
-        if (part.trim()) expandedRaw.push(part.trim());
+        if (part.trim()) expanded.push(part.trim());
       }
     } else if (/^fiction\s*,\s*/i.test(rawStr) && rawStr.includes(',')) {
       for (const part of rawStr.replace(/^fiction\s*,\s*/i, '').split(',')) {
-        if (part.trim()) expandedRaw.push(part.trim());
+        if (part.trim()) expanded.push(part.trim());
       }
     } else {
-      expandedRaw.push(rawStr);
+      expanded.push(rawStr);
     }
   }
 
-  for (const raw of expandedRaw) {
-    let clean = normalizeWhitespace(raw)
+  const seen = new Set();
+  const specificFiction = [];
+  const nonfiction = [];
+  let hasGenericFiction = false;
+
+  for (const item of expanded) {
+    const key = normalizeWhitespace(item)
+      .replace(/^(?:genre|form|subject)\s*:\s*/i, '')
       .replace(/\s*\(.*?\)\s*$/, '')
-      .trim();
-    if (!clean || clean.length < 3 || clean.length > 36) continue;
-    if (clean.includes('--') || clean.includes(':')) continue;
-
-    const cleanMatch = normalizeMatchText(clean);
-    if (!cleanMatch) continue;
-    if (normBookTitle && (cleanMatch === normBookTitle || (normBookTitle.includes(cleanMatch) && cleanMatch.length > 6))) {
-      continue;
-    }
-    if (normBookAuthor && cleanMatch === normBookAuthor) continue;
-
-    if (NOISY_SUBJECT_PATTERNS.some((re) => re.test(clean))) continue;
-    if (/^[a-z]+,\s+[a-z]+$/i.test(clean)) {
-      clean = clean.split(',')[0].trim();
-    }
-
-    const mapped = GENRE_SYNONYM_MAP[clean.toLowerCase()] || GENRE_SYNONYM_MAP[cleanMatch];
-    if (!mapped) {
-      continue;
-    }
-    const key = mapped.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
+      .toLowerCase();
+    const mapped = GENRE_MAP[key] || GENRE_MAP[normalizeMatchText(key)];
+    if (!mapped) continue;
+    if (seen.has(mapped)) continue;
+    seen.add(mapped);
 
     if (mapped === 'Fiction') {
-      generic.push(mapped);
+      hasGenericFiction = true;
+    } else if (NONFICTION_GENRES.has(mapped)) {
+      nonfiction.push(mapped);
     } else {
-      specific.push(mapped);
+      specificFiction.push(mapped);
     }
   }
 
-  const ordered = specific.length > 0 ? specific : generic;
-  return ordered.slice(0, 5);
+  // Handle "Mystery & Thriller" cleanly alongside separate Mystery/Thriller
+  if (specificFiction.includes('Mystery & Thriller')) {
+    const cleaned = specificFiction.filter((g) => g !== 'Mystery' && g !== 'Thriller');
+    specificFiction.length = 0;
+    specificFiction.push(...cleaned);
+  }
+
+  // Never mix History/Nonfiction/Poetry noise into clearly fictional novels
+  const hasFictionSignal = specificFiction.length > 0 || hasGenericFiction;
+  const combined = hasFictionSignal
+    ? [...specificFiction, ...(specificFiction.length === 0 && allowFallbackFiction && hasGenericFiction ? ['Fiction'] : [])]
+    : [...nonfiction];
+
+  if (hasGenericFiction && combined.length > 0 && !combined.includes('Fiction') && combined.length < 4) {
+    // Keep up to 4 crisp genres, putting specific genres first
+    return combined.slice(0, 4);
+  }
+
+  return combined.slice(0, 4);
 }
 
 function parseGoodreadsHtml(html) {
@@ -573,63 +577,86 @@ function parseGoodreadsHtml(html) {
         }
       }
     } catch {
-      // Ignore malformed __NEXT_DATA__ and fall through to LD+JSON
-    }
-  }
-
-  const ldMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  if (ldMatch) {
-    try {
-      const ld = JSON.parse(ldMatch[1]);
-      if (!result.author && Array.isArray(ld.author) && ld.author[0]?.name) {
-        result.author = normalizeWhitespace(ld.author[0].name);
-      } else if (!result.author && ld.author?.name) {
-        result.author = normalizeWhitespace(ld.author.name);
-      }
-      if (!result.isbn && ld.isbn) {
-        result.isbn = normalizeWhitespace(String(ld.isbn));
-      }
-      if (!result.pages && typeof ld.numberOfPages === 'number' && ld.numberOfPages > 0) {
-        result.pages = Math.trunc(ld.numberOfPages);
-      }
-      if (!result.language && ld.inLanguage) {
-        result.language = normalizeWhitespace(ld.inLanguage);
-      }
-      if (!result.format && ld.bookFormat) {
-        result.format = normalizeWhitespace(ld.bookFormat);
-      }
-      if (!result.cover_url && ld.image) {
-        result.cover_url = upgradeGoodreadsCoverUrl(ld.image);
-      }
-      if (!result.goodreads_rating && ld.aggregateRating?.ratingValue) {
-        const avg = Number(ld.aggregateRating.ratingValue);
-        if (Number.isFinite(avg) && avg > 0 && avg <= 5) {
-          result.goodreads_rating = Math.round(avg * 100) / 100;
-        }
-      }
-      if (!result.awards && typeof ld.awards === 'string' && ld.awards.trim()) {
-        result.awards = ld.awards
-          .split(',')
-          .map((s) => normalizeWhitespace(s))
-          .filter(Boolean)
-          .slice(0, 5);
-      }
-    } catch {
-      // Ignore malformed JSON-LD
+      // Ignore malformed __NEXT_DATA__
     }
   }
 
   return Object.keys(result).length > 0 ? result : null;
 }
 
+async function fetchAppleBooksMetadata(book) {
+  const titleVariants = buildSearchTitleVariants(book.title);
+  const authorLast =
+    book.author && book.author !== 'Unknown Author'
+      ? normalizeWhitespace(book.author).split(' ').pop()
+      : '';
+
+  for (const variant of titleVariants) {
+    const term = authorLast ? `${variant} ${authorLast}` : variant;
+    for (const country of ['us', 'gb']) {
+      try {
+        const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=ebook&country=${country}&limit=5`;
+        const res = await httpGetWithRetry(url, { Accept: 'application/json' }, { timeoutMs: 10000, retries: 2 });
+        if (res.status !== 200) continue;
+
+        const json = JSON.parse(res.body);
+        const results = Array.isArray(json.results) ? json.results : [];
+        const hit = results.find(
+          (item) =>
+            (isTitleMatch(book.title, item.trackName || item.trackCensoredName || '') ||
+              isTitleMatch(variant, item.trackName || item.trackCensoredName || '')) &&
+            isSameAuthorClose(book.author, item.artistName || '')
+        );
+        if (!hit) continue;
+
+        const parsed = {};
+        const primaryArtist = normalizeWhitespace(String(hit.artistName || '').split(/&|,/)[0] || '');
+        if (primaryArtist && (book.author === 'Unknown Author' || isSameAuthorClose(book.author, primaryArtist))) {
+          parsed.author = primaryArtist;
+        }
+
+        if (hit.description) {
+          const cleanedDesc = htmlToCleanMultilineText(hit.description);
+          if (cleanedDesc && cleanedDesc.length > 40) {
+            parsed.description = cleanedDesc;
+          }
+        }
+
+        if (Array.isArray(hit.genres) && hit.genres.length > 0) {
+          // Apple Books lists primary genres in the leading entries before trailing store-shelf tags
+          const rawPrimary = hit.genres
+            .slice(0, 6)
+            .filter((g) => !/^books$/i.test(String(g || '').trim()));
+          const mappedAll = canonicalizeGenresList(rawPrimary);
+          const specificOnly = mappedAll.filter((g) => g !== 'Fiction');
+          parsed.genres = specificOnly.length > 0 ? specificOnly.slice(0, 2) : mappedAll.slice(0, 2);
+        }
+
+        if (hit.releaseDate) {
+          const year = new Date(hit.releaseDate).getUTCFullYear();
+          if (Number.isFinite(year) && year >= 1800 && year <= 2100) {
+            parsed.release_year = year;
+          }
+        }
+
+        if (Object.keys(parsed).length > 0) return parsed;
+      } catch {
+        // Try next storefront/variant
+      }
+      await sleep(750);
+    }
+  }
+
+  return null;
+}
+
 async function fetchGoodreadsAutoComplete(book) {
   const targetId = extractGoodreadsBookId(book.goodreads_url);
-  const queries = [book.title];
+  const queries = [];
   if (book.author && book.author !== 'Unknown Author') {
     queries.push(`${book.title} ${book.author}`);
   }
-
-  const normBookTitle = normalizeMatchText(book.title);
+  queries.push(book.title);
 
   for (const q of queries) {
     try {
@@ -641,27 +668,16 @@ async function fetchGoodreadsAutoComplete(book) {
 
       let match = targetId ? items.find((item) => String(item.bookId) === String(targetId)) : null;
       if (!match) {
-        match = items.find((item) => {
-          const itemTitle = normalizeMatchText(item.bookTitleBare || item.title || '');
-          const itemAuthor = item.author?.name || '';
-          const titleOk =
-            itemTitle === normBookTitle ||
-            (normBookTitle.length >= 6 && (itemTitle.includes(normBookTitle) || normBookTitle.includes(itemTitle)));
-          return titleOk && isSameAuthorClose(book.author, itemAuthor);
-        });
-      }
-      if (!match) {
-        match = items.find((item) => {
-          const itemTitle = normalizeMatchText(item.bookTitleBare || item.title || '');
-          return itemTitle === normBookTitle;
-        });
+        match = items.find(
+          (item) =>
+            isTitleMatch(book.title, item.bookTitleBare || item.title || '') &&
+            isSameAuthorClose(book.author, item.author?.name || '')
+        );
       }
       if (!match) continue;
 
       const parsed = {};
-      if (match.author?.name && isSameAuthorClose(book.author, match.author.name)) {
-        parsed.author = normalizeWhitespace(match.author.name);
-      } else if (match.author?.name && book.author === 'Unknown Author') {
+      if (match.author?.name && (book.author === 'Unknown Author' || isSameAuthorClose(book.author, match.author.name))) {
         parsed.author = normalizeWhitespace(match.author.name);
       }
       if (match.description?.html) {
@@ -694,39 +710,100 @@ function extractYearFromDateString(str) {
   return match ? Number.parseInt(match[1], 10) : null;
 }
 
+function isTradePublisher(publisher) {
+  if (!publisher || typeof publisher !== 'string') return false;
+  return !SKIP_PUBLISHER_PATTERNS.some((re) => re.test(publisher));
+}
+
 function pickBestIsbn(isbnList) {
   if (!Array.isArray(isbnList)) return null;
   const clean = isbnList.map((s) => String(s).replace(/[^0-9Xx]/g, '')).filter(Boolean);
   return clean.find((s) => s.length === 13) || clean.find((s) => s.length === 10) || clean[0] || null;
 }
 
-function pickMatchingOpenLibraryDoc(docs, book) {
+function pickMatchingOpenLibraryDoc(docs, book, { expectedYear = null } = {}) {
   if (!Array.isArray(docs) || docs.length === 0) return null;
-  const normBookTitle = normalizeMatchText(book.title);
 
   for (const doc of docs) {
-    const docTitle = normalizeMatchText(doc.title || '');
-    const titleMatches =
-      docTitle === normBookTitle ||
-      docTitle.startsWith(normBookTitle) ||
-      normBookTitle.startsWith(docTitle) ||
-      (normBookTitle.length >= 8 && docTitle.includes(normBookTitle));
-    if (!titleMatches) continue;
+    if (!isTitleMatch(book.title, doc.title || '')) continue;
 
-    const docAuthor = Array.isArray(doc.author_name) ? doc.author_name.join(' ') : '';
-    if (isSameAuthorClose(book.author, docAuthor) || !isLatinReadableAuthor(docAuthor)) {
-      return doc;
+    const authors = Array.isArray(doc.author_name) ? doc.author_name : [];
+    const joinedAuthors = authors.join(' ');
+    if (!joinedAuthors) continue;
+
+    const authorMatches =
+      isSameAuthorClose(book.author, joinedAuthors) || hasNonLatinScript(joinedAuthors);
+    if (!authorMatches) continue;
+
+    // Prevent attaching a completely unrelated older book with the same title
+    if (
+      expectedYear &&
+      expectedYear >= 1995 &&
+      typeof doc.first_publish_year === 'number' &&
+      doc.first_publish_year > 0 &&
+      expectedYear - doc.first_publish_year > 15
+    ) {
+      continue;
     }
+
+    return doc;
   }
 
   return null;
 }
 
-async function fetchOpenLibraryMetadata(book, needs = {}) {
+function pickBestEnglishEdition(editions, { allowMalayFallback = false } = {}) {
+  if (!Array.isArray(editions) || editions.length === 0) return null;
+
+  let bestScore = -1;
+  let bestEd = null;
+
+  for (const ed of editions) {
+    const langs = Array.isArray(ed.languages) ? ed.languages.map((l) => l.key || '') : [];
+    const hasExplicitEng = langs.some((k) => k.endsWith('/eng'));
+    const hasExplicitMalay = langs.some((k) => k.endsWith('/msa') || k.endsWith('/may'));
+    const isEnglishLang = langs.length === 0 || hasExplicitEng;
+    if (!isEnglishLang && !(allowMalayFallback && hasExplicitMalay)) continue;
+
+    const pub = Array.isArray(ed.publishers) ? ed.publishers[0] || '' : '';
+    if (pub && !isTradePublisher(pub)) continue;
+
+    const isbn = pickBestIsbn([...(ed.isbn_13 || []), ...(ed.isbn_10 || [])]);
+    const isEnglishGroupIsbn = Boolean(isbn && /^(9780|9781|9798|0|1)/.test(isbn));
+    const isMalayGroupIsbn = Boolean(isbn && /^(978983|978967)/.test(isbn));
+    if (langs.length === 0 && !isEnglishGroupIsbn && !(allowMalayFallback && isMalayGroupIsbn)) {
+      continue;
+    }
+
+    let score = 0;
+    if (isEnglishGroupIsbn) score += 6;
+    if (isbn && isbn.length === 13) score += 4;
+    else if (isbn) score += 2;
+    if (pub) score += 3;
+    if (hasExplicitEng) score += 4;
+    if (typeof ed.number_of_pages === 'number' && ed.number_of_pages > 0) score += 1;
+    if (extractYearFromDateString(ed.publish_date)) score += 1;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestEd = {
+        isbn,
+        publisher: pub ? normalizeWhitespace(pub) : null,
+        pages: typeof ed.number_of_pages === 'number' && ed.number_of_pages > 0 ? Math.trunc(ed.number_of_pages) : null,
+        year: extractYearFromDateString(ed.publish_date),
+        language: hasExplicitEng || isEnglishGroupIsbn ? 'English' : hasExplicitMalay ? 'Malay' : null,
+      };
+    }
+  }
+
+  return bestEd;
+}
+
+async function fetchOpenLibraryMetadata(book, { needsDescription = false, expectedYear = null } = {}) {
   try {
     const fields =
-      'key,title,author_name,subject,first_publish_year,isbn,number_of_pages_median,publisher,language,edition_key';
-    const cleanTitle = normalizeMatchText(book.title);
+      'key,title,author_name,subject,first_publish_year,isbn,number_of_pages_median,publisher,language';
+    const cleanTitle = normalizeMatchText(stripTitleSubtitle(book.title));
     const authorLast =
       book.author && book.author !== 'Unknown Author'
         ? normalizeWhitespace(book.author).split(' ').pop()
@@ -734,12 +811,12 @@ async function fetchOpenLibraryMetadata(book, needs = {}) {
 
     const candidateUrls = [];
     if (authorLast) {
-      const p1 = new URLSearchParams({ title: book.title, author: authorLast, limit: '4', fields });
+      const p1 = new URLSearchParams({ title: stripTitleSubtitle(book.title), author: authorLast, limit: '5', fields });
       candidateUrls.push(`https://openlibrary.org/search.json?${p1.toString()}`);
-      const p2 = new URLSearchParams({ q: `${cleanTitle} ${authorLast}`, limit: '4', fields });
+      const p2 = new URLSearchParams({ q: `${cleanTitle} ${authorLast}`, limit: '5', fields });
       candidateUrls.push(`https://openlibrary.org/search.json?${p2.toString()}`);
     }
-    const p3 = new URLSearchParams({ title: cleanTitle || book.title, limit: '4', fields });
+    const p3 = new URLSearchParams({ title: cleanTitle || book.title, limit: '5', fields });
     candidateUrls.push(`https://openlibrary.org/search.json?${p3.toString()}`);
 
     let doc = null;
@@ -751,7 +828,7 @@ async function fetchOpenLibraryMetadata(book, needs = {}) {
       );
       if (searchRes.status !== 200) continue;
       const searchJson = JSON.parse(searchRes.body);
-      doc = pickMatchingOpenLibraryDoc(searchJson.docs, book);
+      doc = pickMatchingOpenLibraryDoc(searchJson.docs, book, { expectedYear });
       if (doc) break;
     }
 
@@ -761,25 +838,59 @@ async function fetchOpenLibraryMetadata(book, needs = {}) {
     if (Array.isArray(doc.author_name) && isLatinReadableAuthor(doc.author_name[0])) {
       meta.author = normalizeWhitespace(doc.author_name[0]);
     }
-    const genres = canonicalizeGenresList(doc.subject, book);
-    if (genres.length > 0) meta.genres = genres;
+
+    const docGenres = canonicalizeGenresList(doc.subject, { allowFallbackFiction: false });
+    if (docGenres.length > 0) meta.genres = docGenres;
+
     if (typeof doc.first_publish_year === 'number' && doc.first_publish_year > 0) {
       meta.publication_year = Math.trunc(doc.first_publish_year);
     }
     if (typeof doc.number_of_pages_median === 'number' && doc.number_of_pages_median > 0) {
       meta.pages = Math.trunc(doc.number_of_pages_median);
     }
-    const isbn = pickBestIsbn(doc.isbn);
-    if (isbn) meta.isbn = isbn;
-    if (Array.isArray(doc.publisher) && doc.publisher[0]) {
-      meta.publisher = normalizeWhitespace(doc.publisher[0]);
-    }
-    if (Array.isArray(doc.language) && doc.language[0]) {
-      const langCode = String(doc.language[0]).toLowerCase();
-      meta.language = OPENLIBRARY_LANGUAGE_MAP[langCode] || normalizeWhitespace(doc.language[0]);
+
+    // Fetch clean English trade edition from /works/{key}/editions.json
+    if (doc.key) {
+      try {
+        const edListRes = await httpGetWithRetry(
+          `https://openlibrary.org${doc.key}/editions.json?limit=35`,
+          { Accept: 'application/json' },
+          { timeoutMs: 10000, retries: 1 }
+        );
+        if (edListRes.status === 200) {
+          const edListJson = JSON.parse(edListRes.body);
+          const bestEd = pickBestEnglishEdition(edListJson.entries, {
+            allowMalayFallback: book.slug === 'tunggu-teduh-dulu',
+          });
+          if (bestEd) {
+            if (bestEd.isbn) meta.isbn = bestEd.isbn;
+            if (bestEd.publisher) meta.publisher = bestEd.publisher;
+            if (bestEd.pages && !meta.pages) meta.pages = bestEd.pages;
+            if (bestEd.language) meta.language = bestEd.language;
+            if (!meta.publication_year && bestEd.year) meta.publication_year = bestEd.year;
+          }
+        }
+      } catch {
+        // Ignore editions fetch error
+      }
     }
 
-    if ((needs.description || !meta.genres?.length) && doc.key) {
+    if (!meta.isbn) {
+      const fallbackIsbn = pickBestIsbn(doc.isbn);
+      if (fallbackIsbn) meta.isbn = fallbackIsbn;
+    }
+    if (!meta.publisher && Array.isArray(doc.publisher)) {
+      const tradePub = doc.publisher.find(isTradePublisher);
+      if (tradePub) meta.publisher = normalizeWhitespace(tradePub);
+    }
+    if (!meta.language && Array.isArray(doc.language) && doc.language[0]) {
+      const langCodes = doc.language.map((l) => String(l).toLowerCase());
+      const preferredCode = langCodes.find((c) => c === 'eng' || c === 'en') || langCodes[0];
+      meta.language = OPENLIBRARY_LANGUAGE_MAP[preferredCode] || normalizeWhitespace(preferredCode);
+    }
+
+    // Fetch work description & subjects if still needed
+    if ((needsDescription || !meta.genres?.length) && doc.key) {
       try {
         const workRes = await httpGetWithRetry(
           `https://openlibrary.org${doc.key}.json`,
@@ -794,47 +905,22 @@ async function fetchOpenLibraryMetadata(book, needs = {}) {
               : workJson.description?.value || null;
           if (descVal) {
             const cleanedDesc = normalizeMultilineText(
-              descVal.replace(/\[.*?\]\(https?:\/\/.*?\)/g, '').replace(/\(\[Source\][\s\S]*$/i, '')
+              descVal
+                .replace(/\[.*?\]\(https?:\/\/.*?\)/g, '')
+                .replace(/\(\[Source\][\s\S]*$/i, '')
+                .replace(/--From Goodreads.*$/i, '')
             );
-            if (cleanedDesc && cleanedDesc.length > 25) {
+            if (cleanedDesc && cleanedDesc.length > 40) {
               meta.description = cleanedDesc;
             }
           }
           if (!meta.genres?.length && Array.isArray(workJson.subjects)) {
-            const workGenres = canonicalizeGenresList(workJson.subjects, book);
+            const workGenres = canonicalizeGenresList(workJson.subjects, { allowFallbackFiction: false });
             if (workGenres.length > 0) meta.genres = workGenres;
           }
         }
       } catch {
         // Ignore work lookup failure
-      }
-    }
-
-    if ((!meta.isbn || !meta.pages || !meta.publisher) && Array.isArray(doc.edition_key) && doc.edition_key[0]) {
-      try {
-        const edRes = await httpGetWithRetry(
-          `https://openlibrary.org/books/${encodeURIComponent(doc.edition_key[0])}.json`,
-          { Accept: 'application/json' },
-          { timeoutMs: 10000, retries: 1 }
-        );
-        if (edRes.status === 200) {
-          const ed = JSON.parse(edRes.body);
-          if (!meta.isbn) {
-            meta.isbn = pickBestIsbn([...(ed.isbn_13 || []), ...(ed.isbn_10 || [])]);
-          }
-          if (!meta.pages && typeof ed.number_of_pages === 'number' && ed.number_of_pages > 0) {
-            meta.pages = Math.trunc(ed.number_of_pages);
-          }
-          if (!meta.publisher && Array.isArray(ed.publishers) && ed.publishers[0]) {
-            meta.publisher = normalizeWhitespace(ed.publishers[0]);
-          }
-          if (!meta.publication_year && ed.publish_date) {
-            const yr = extractYearFromDateString(ed.publish_date);
-            if (yr) meta.publication_year = yr;
-          }
-        }
-      } catch {
-        // Ignore edition lookup failure
       }
     }
 
@@ -850,16 +936,11 @@ function normalizeBookFormat(rawFormat, formatMap = {}) {
   return formatMap[key] || normalizeWhitespace(String(rawFormat));
 }
 
-function isTruncatedText(text) {
-  return typeof text === 'string' && /(\.\.\.|…)\s*$/.test(text.trim());
-}
-
 function hasCompleteEnrichment(book) {
   if (!book || !book.description) return false;
   if (!Array.isArray(book.genres)) return false;
-  const cleanGenres = canonicalizeGenresList(book.genres, book);
+  const cleanGenres = canonicalizeGenresList(book.genres);
   if (cleanGenres.length !== book.genres.length) return false;
-  // Already enriched in a previous pass if it has Goodreads rating or full catalog fields
   return Boolean(
     book.goodreads_rating ||
       (!isTruncatedText(book.description) && cleanGenres.length > 0 && book.isbn && book.pages && book.publisher)
@@ -867,9 +948,16 @@ function hasCompleteEnrichment(book) {
 }
 
 async function fetchSingleBookMetadata(book, { formatMap = {}, wafState = { trips: 0 } } = {}) {
-  let grHtmlMeta = null;
+  // 1. Apple Books API (fast, reliable JSON: full publisher synopsis + accurate literary genres + release year)
+  const appleMeta = await fetchAppleBooksMetadata(book);
 
-  if (book.goodreads_url && wafState.trips < 2) {
+  // 2. Goodreads auto_complete API (canonical Goodreads author, exact pages, Goodreads rating, cover, fallback blurb)
+  const grAcMeta = await fetchGoodreadsAutoComplete(book);
+
+  // 3. Goodreads HTML (only when missing genres or full description, and WAF hasn't tripped)
+  let grHtmlMeta = null;
+  const needsGrHtml = !appleMeta?.genres?.length || !appleMeta?.description;
+  if (book.goodreads_url && needsGrHtml && wafState.trips < 2) {
     try {
       const res = await httpGetIpv4(
         book.goodreads_url,
@@ -887,89 +975,108 @@ async function fetchSingleBookMetadata(book, { formatMap = {}, wafState = { trip
         wafState.trips += 1;
       }
     } catch {
-      // Fall back to auto_complete + OpenLibrary
+      // Ignore WAF/network errors gracefully
     }
   }
 
-  let grAcMeta = null;
-  const needsCoreGr = !grHtmlMeta || !grHtmlMeta.description || !grHtmlMeta.author;
-  if (needsCoreGr) {
-    grAcMeta = await fetchGoodreadsAutoComplete(book);
-  }
+  // 4. Strictly verified Open Library (trade ISBN, English publisher, original pub year, language, fallback full work synopsis)
+  const needsDescription = !grHtmlMeta?.description && !appleMeta?.description;
+  const olMeta = await fetchOpenLibraryMetadata(
+    {
+      ...book,
+      author: grHtmlMeta?.author || grAcMeta?.author || appleMeta?.author || book.author,
+    },
+    {
+      needsDescription,
+      expectedYear: appleMeta?.release_year || null,
+    }
+  );
 
-  const combinedGr = {
-    ...(grAcMeta || {}),
-    ...(grHtmlMeta || {}),
-  };
-  if (grAcMeta?.description && !combinedGr.description) {
-    combinedGr.description = grAcMeta.description;
-  }
+  // Merge genres cleanly: Goodreads HTML -> Apple Books -> clean Open Library
+  const mergedGenres = canonicalizeGenresList([
+    ...(grHtmlMeta?.genres || []),
+    ...(appleMeta?.genres || []),
+    ...(olMeta?.genres || []),
+  ]);
 
-  const needsOl =
-    !combinedGr.genres?.length ||
-    !combinedGr.isbn ||
-    !combinedGr.publisher ||
-    !combinedGr.publication_year ||
-    !grHtmlMeta?.description ||
-    !combinedGr.pages;
-
-  let olMeta = null;
-  if (needsOl) {
-    olMeta = await fetchOpenLibraryMetadata(
-      {
-        ...book,
-        author: combinedGr.author || book.author,
-      },
-      { description: !grHtmlMeta?.description }
-    );
-  }
-
-  const existingFullDesc =
-    book.description && !isTruncatedText(book.description) ? book.description : null;
-  let bestDescription = existingFullDesc || grHtmlMeta?.description || null;
+  // Merge synopsis cleanly: Goodreads HTML full -> Apple Books full -> Open Library work full -> Goodreads snippet
+  let bestDescription =
+    book.description && !isTruncatedText(book.description) && book.description.length > 150
+      ? book.description
+      : null;
   if (!bestDescription) {
-    const grShort = grAcMeta?.description || book.description || null;
-    const olDesc = olMeta?.description || null;
-    if (olDesc && (!grShort || (isTruncatedText(grShort) && olDesc.length > grShort.length + 25))) {
-      bestDescription = olDesc;
-    } else {
-      bestDescription = grShort || olDesc;
-    }
+    const candidates = [
+      grHtmlMeta?.description,
+      appleMeta?.description,
+      olMeta?.description,
+      grAcMeta?.description,
+      book.description,
+    ].filter(Boolean);
+    bestDescription =
+      candidates.find((d) => !isTruncatedText(d) && d.length > 140) ||
+      candidates.find((d) => !isTruncatedText(d)) ||
+      candidates[0] ||
+      null;
   }
 
+  // Merge canonical author
   let resolvedAuthor = book.author;
-  if (combinedGr.author) {
-    resolvedAuthor = combinedGr.author;
-  } else if (olMeta?.author && (book.author === 'Unknown Author' || isSameAuthorClose(book.author, olMeta.author))) {
+  if (grHtmlMeta?.author) {
+    resolvedAuthor = grHtmlMeta.author;
+  } else if (grAcMeta?.author) {
+    resolvedAuthor = grAcMeta.author;
+  } else if (
+    appleMeta?.author &&
+    (book.author === 'Unknown Author' || isSameAuthorClose(book.author, appleMeta.author))
+  ) {
+    resolvedAuthor = appleMeta.author;
+  } else if (
+    olMeta?.author &&
+    (book.author === 'Unknown Author' || isSameAuthorClose(book.author, olMeta.author))
+  ) {
     resolvedAuthor = olMeta.author;
   }
 
-  const existingCleanGenres = canonicalizeGenresList(book.genres, book);
-  const resolvedGenres =
-    (existingCleanGenres.length ? existingCleanGenres : null) ||
-    (combinedGr.genres?.length ? combinedGr.genres : null) ||
-    (olMeta?.genres?.length ? olMeta.genres : null) ||
-    [];
+  // Preserve Notion-curated genres if already present on the incoming Notion row, otherwise use enriched genres
+  const finalGenres = book.genres?.length ? canonicalizeGenresList(book.genres) : mergedGenres;
+
+  // Prefer Apple Books release year if OpenLibrary matched an unrelated older year (> 5 yrs earlier for modern books)
+  let resolvedYear =
+    book.publication_year ||
+    grHtmlMeta?.publication_year ||
+    olMeta?.publication_year ||
+    appleMeta?.release_year ||
+    null;
+  if (
+    !book.publication_year &&
+    !grHtmlMeta?.publication_year &&
+    appleMeta?.release_year >= 2005 &&
+    olMeta?.publication_year &&
+    appleMeta.release_year - olMeta.publication_year > 5
+  ) {
+    resolvedYear = appleMeta.release_year;
+  }
 
   return {
     author: resolvedAuthor,
-    genres: resolvedGenres,
+    genres: finalGenres,
     description: bestDescription,
-    isbn: book.isbn || combinedGr.isbn || olMeta?.isbn || null,
-    pages: book.pages || combinedGr.pages || olMeta?.pages || null,
-    publisher: book.publisher || combinedGr.publisher || olMeta?.publisher || null,
-    publication_year:
-      book.publication_year || combinedGr.publication_year || olMeta?.publication_year || null,
-    language: book.language || combinedGr.language || olMeta?.language || null,
-    original_title: book.original_title || combinedGr.original_title || null,
-    series: book.series || combinedGr.series || null,
-    awards: book.awards?.length ? book.awards : combinedGr.awards || [],
-    goodreads_rating: book.goodreads_rating || combinedGr.goodreads_rating || null,
+    isbn: book.isbn || grHtmlMeta?.isbn || olMeta?.isbn || null,
+    pages: book.pages || grHtmlMeta?.pages || grAcMeta?.pages || olMeta?.pages || null,
+    publisher: book.publisher || grHtmlMeta?.publisher || olMeta?.publisher || null,
+    publication_year: resolvedYear,
+    language: book.language || grHtmlMeta?.language || olMeta?.language || null,
+    original_title: book.original_title || grHtmlMeta?.original_title || null,
+    series: book.series || grHtmlMeta?.series || null,
+    awards: book.awards?.length ? book.awards : grHtmlMeta?.awards || [],
+    goodreads_rating:
+      book.goodreads_rating || grHtmlMeta?.goodreads_rating || grAcMeta?.goodreads_rating || null,
     format:
       book.format ||
-      normalizeBookFormat(combinedGr.format, formatMap) ||
+      normalizeBookFormat(grHtmlMeta?.format, formatMap) ||
       null,
-    cover_url: book.cover_url || combinedGr.cover_url || null,
+    cover_url:
+      book.cover_url || grHtmlMeta?.cover_url || grAcMeta?.cover_url || null,
   };
 }
 
@@ -979,7 +1086,7 @@ export async function enrichBooksMetadata(
     existingBooks = [],
     formatMap = {},
     forceRefresh = process.env.FORCE_METADATA_REFRESH === 'true',
-    concurrency = 2,
+    concurrency = 1,
     onProgress = null,
   } = {}
 ) {
@@ -1006,15 +1113,16 @@ export async function enrichBooksMetadata(
         (book.goodreads_url && existingByGrUrl.get(book.goodreads_url)) ||
         null;
 
-      const sameGrUrl = !book.goodreads_url || !prev?.goodreads_url || prev.goodreads_url === book.goodreads_url;
-      const prevCleanGenres = prev ? canonicalizeGenresList(prev.genres, book) : [];
+      const sameGrUrl =
+        !book.goodreads_url || !prev?.goodreads_url || prev.goodreads_url === book.goodreads_url;
+      const prevCleanGenres = prev ? canonicalizeGenresList(prev.genres) : [];
       const prevHasComplete = prev && hasCompleteEnrichment({ ...prev, genres: prevCleanGenres });
 
       if (!forceRefresh && prevHasComplete && sameGrUrl) {
         enriched[idx] = {
           ...book,
           author: prev.author || book.author,
-          genres: book.genres?.length ? canonicalizeGenresList(book.genres, book) : prevCleanGenres,
+          genres: book.genres?.length ? canonicalizeGenresList(book.genres) : prevCleanGenres,
           description: book.description || prev.description || null,
           isbn: book.isbn || prev.isbn || null,
           pages: book.pages || prev.pages || null,
@@ -1035,28 +1143,8 @@ export async function enrichBooksMetadata(
         continue;
       }
 
-      const seedBook =
-        !forceRefresh && prev && sameGrUrl
-          ? {
-              ...book,
-              author: prev.author || book.author,
-              genres: book.genres?.length ? canonicalizeGenresList(book.genres, book) : prevCleanGenres,
-              description: book.description || prev.description || null,
-              isbn: book.isbn || prev.isbn || null,
-              pages: book.pages || prev.pages || null,
-              publisher: book.publisher || prev.publisher || null,
-              publication_year: book.publication_year || prev.publication_year || null,
-              language: book.language || prev.language || null,
-              original_title: book.original_title || prev.original_title || null,
-              series: book.series || prev.series || null,
-              awards: book.awards?.length ? book.awards : prev.awards || [],
-              goodreads_rating: book.goodreads_rating || prev.goodreads_rating || null,
-              format: book.format || prev.format || null,
-              cover_url: book.cover_url || prev.cover_url || null,
-            }
-          : book;
-
-      const fetched = await fetchSingleBookMetadata(seedBook, { formatMap, wafState });
+      // Pass a clean Notion-level seed (don't carry over stale noisy genres/pubs on refresh)
+      const fetched = await fetchSingleBookMetadata(book, { formatMap, wafState });
       enriched[idx] = {
         ...book,
         ...fetched,
@@ -1065,7 +1153,7 @@ export async function enrichBooksMetadata(
       if (onProgress) {
         onProgress(fetchedCount + reusedCount, books.length, book.title);
       }
-      await sleep(220);
+      await sleep(450);
     }
   }
 
@@ -1089,12 +1177,41 @@ if (invokedPath === fileURLToPath(import.meta.url)) {
   }
   const config = loadMappingConfig();
   const forceRefresh = process.argv.includes('--force');
-  console.log(`Enriching ${existing.books.length} books from Goodreads & Open Library...`);
-  const { books: enrichedRaw, fetchedCount, reusedCount } = await enrichBooksMetadata(existing.books, {
-    existingBooks: forceRefresh ? [] : existing.books,
+  const onlyArg = process.argv.find((arg) => arg.startsWith('--only='));
+  const onlySlugs = onlyArg
+    ? new Set(onlyArg.slice('--only='.length).split(',').map((s) => s.trim()).filter(Boolean))
+    : null;
+
+  const stripForRefetch = (b) => ({
+    ...b,
+    genres: [],
+    description: null,
+    isbn: null,
+    publisher: null,
+    publication_year: null,
+    language: null,
+    original_title: null,
+    series: null,
+    awards: [],
+    goodreads_rating: null,
+  });
+
+  // When running standalone --force or --only, strip previously scraped fields on target books while keeping Notion baseline + reviews
+  const seedBooks = existing.books.map((b) =>
+    forceRefresh || (onlySlugs && onlySlugs.has(b.slug)) ? stripForRefetch(b) : b
+  );
+  const existingForRun = forceRefresh
+    ? []
+    : onlySlugs
+      ? existing.books.filter((b) => !onlySlugs.has(b.slug))
+      : existing.books;
+
+  console.log(`Enriching ${seedBooks.length} books from Apple Books, Goodreads & Open Library...`);
+  const { books: enrichedRaw, fetchedCount, reusedCount } = await enrichBooksMetadata(seedBooks, {
+    existingBooks: existingForRun,
     formatMap: config.formatMap || {},
     forceRefresh,
-    concurrency: 2,
+    concurrency: 1,
     onProgress: (done, total, title) => {
       if (done % 15 === 0 || done === total) {
         console.log(`Progress: ${done}/${total} (${title})`);
@@ -1110,5 +1227,7 @@ if (invokedPath === fileURLToPath(import.meta.url)) {
     total_books: books.length,
     books,
   });
-  console.log(`Enrichment complete: fetched=${fetchedCount}, reused=${reusedCount}, total=${books.length}`);
+  console.log(
+    `Enrichment complete: fetched=${fetchedCount}, reused=${reusedCount}, total=${books.length}`
+  );
 }

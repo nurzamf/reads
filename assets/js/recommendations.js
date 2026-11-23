@@ -86,7 +86,7 @@ export function generateRecommendations(books, customConfig = {}) {
     return {
       hasEnoughHistory: false,
       recommendations: [],
-      note: 'Add books with the To Be Read status in Notion to receive automatic next-up picks.',
+      note: 'Add books to your To Be Read shelf to receive automatic next-up picks.',
     };
   }
 
@@ -116,7 +116,7 @@ export function generateRecommendations(books, customConfig = {}) {
             ? `Highly rated (${book.rating}/5) in your To Be Read list.`
             : 'Selected from your To Be Read shelf for variety.',
       })),
-      note: 'Recommendations will personalise further as more completed and rated books are logged in Notion.',
+      note: 'Recommendations will personalise further as more completed and rated books are logged.',
     };
   }
 

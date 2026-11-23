@@ -7,7 +7,6 @@ import {
   toTitleCasePreserving,
 } from './utils.js';
 
-const CACHE_KEY = 'nurzams_library_cache_v3';
 const DATA_URL = './data/library.json';
 
 let memoryLibrary = null;
@@ -128,21 +127,8 @@ export async function loadLibrary({ forceRefresh = false } = {}) {
     return memoryLibrary;
   }
 
-  if (!forceRefresh) {
-    try {
-      const cached = sessionStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const parsed = normalizeLibraryPayload(JSON.parse(cached));
-        memoryLibrary = parsed;
-        return parsed;
-      }
-    } catch {
-      // Ignore storage restrictions or stale cache entries
-    }
-  }
-
   const response = await fetch(DATA_URL, {
-    cache: forceRefresh ? 'no-cache' : 'default',
+    cache: 'no-cache',
   });
 
   if (!response.ok) {
@@ -152,14 +138,6 @@ export async function loadLibrary({ forceRefresh = false } = {}) {
   const json = await response.json();
   const normalized = normalizeLibraryPayload(json);
   memoryLibrary = normalized;
-
-  try {
-    if (!normalized.is_sample_data) {
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify(json));
-    }
-  } catch {
-    // Ignore sessionStorage quota issues
-  }
 
   return normalized;
 }
