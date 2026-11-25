@@ -39,13 +39,14 @@ export function computeAverageRating(books) {
 }
 
 export function computeCollectionStats(books) {
+  const ownedBooks = books.filter((b) => !isWishlistBook(b));
   const readBooks = books.filter(isCompletedBook);
   const readingBooks = books.filter(isReadingBook);
   const toReadBooks = books.filter(isToReadBook);
   const wishlistBooks = books.filter(isWishlistBook);
   const dnfBooks = books.filter(isDnfBook);
 
-  const ratingSummary = computeAverageRating(books);
+  const ratingSummary = computeAverageRating(ownedBooks);
   const readRatingSummary = computeAverageRating(readBooks);
 
   const pagesReadBooks = readBooks.filter(
@@ -57,7 +58,7 @@ export function computeCollectionStats(books) {
       : null;
 
   return {
-    totalBooks: books.length,
+    totalBooks: ownedBooks.length,
     readCount: readBooks.length,
     readingCount: readingBooks.length,
     toReadCount: toReadBooks.length,
